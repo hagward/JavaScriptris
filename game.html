@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>JavaScriptris</title>
+		<link rel="shortcut icon"
+			href="https://dl.dropboxusercontent.com/u/334931/favicon.ico">
+		<style>
+			#header {
+				font: 13pt Tahoma;
+				text-align: center;
+				margin-bottom: 4px;
+			}
+			#footer {
+				font: 8pt Tahoma;
+				color: grey;
+				text-align: center;
+				margin-top: 4px;
+			}
+			canvas {
+				border: 1px dotted grey;
+				margin: 0 auto;
+				display: block;
+				width: 300px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="header">JavaScriptris v0.1</div>
+		<canvas id="a" width="300" height="480">
+			Your browser does not support canvas!
+		</canvas>
+		<div id="footer">
+			Controls: wasd + space<br>
+			m = mono-/multicolor<br>
+			p = pause
+		</div>
+		<script type="text/javascript" src="tetris.js"></script>
+	</body>
+</html>
