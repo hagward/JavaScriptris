@@ -10,3 +10,5 @@ matrix), but maintaining the list when deleting rows showed to be a bit
 tricky. I then reckoned that was a completely unnecessary optimization and
 saved myself from the headache. The score system is from the original Tetris
 but the level system is completely improvised.
+
+rattmuffen joined the team on one beatiful evening in June.
