@@ -11,4 +11,6 @@ tricky. I then reckoned that was a completely unnecessary optimization and
 saved myself from the headache. The score system is from the original Tetris
 but the level system is completely improvised.
 
-rattmuffen joined the team on one beatiful evening in June.
+On one beautiful evening in June, GitHub user rattmuffen joined the team to
+try to bring multiplayer functionality into the picture. Hence, he is currently
+residing in the 'multiplayer' branch.

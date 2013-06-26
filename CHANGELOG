@@ -1,0 +1,5 @@
+v0.2, 2013-06-26
+----------------
+  * A new canvas showing the next upcoming tetromino was added.
+  * Tetrominos rotate clockwise.
+  * Score and level is shown in the very foreground.
