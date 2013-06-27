@@ -96,16 +96,27 @@ var x, y;
 // Rotation (i.e. "index in tetrominoes array").
 var r;
 
+var gameLoop;
+
 function newGame() {
 	level = 0;
 	score = 0;
 	running = true;
 	paused = false;
+
 	for (var i = 0; i < height; i++)
 		for (var j = 0; j < width; j++)
 			blocks[i][j] = -1;
+	
 	nextTet = getRandomInt(0, 6);
 	newTetromino();
+
+	clearInterval(gameLoop);
+	gameLoop = setInterval(run, updateInterval);
+
+	// Need to draw before first update for the first tetromino to appear at the
+	// very top.
+	draw();
 }
 
 // Creates a new tetromino by setting the 'next' one as the current and
@@ -133,7 +144,7 @@ function newTetromino() {
 }
 
 function moveLeft() {
-	if (paused) return;
+	if (paused || !running) return;
 	for (var i = 0; i < 4; i++)
 		if (x + tetros[curTet][r][i][X] <= 0
 				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
@@ -143,7 +154,7 @@ function moveLeft() {
 }
 
 function moveRight() {
-	if (paused) return;
+	if (paused || !running) return;
 	for (var i = 0; i < 4; i++)
 		if (x + tetros[curTet][r][i][X] >= width - 1
 				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
@@ -157,7 +168,7 @@ function getRandomInt(min, max) {
 }
 
 function rotate() {
-	if (paused) return;
+	if (paused || !running) return;
 	var newRot = (r + 1) % tetros[curTet].length;
 	for (var i = 0; i < 4; i++) {
 		var newX = x + tetros[curTet][newRot][i][X];
@@ -225,16 +236,14 @@ function gameOver() {
 
 // Calls update() until the current tetromino reaches the bottom.
 function instaDrop() {
-	if (paused)
-		return;
+	if (paused || !running) return;
 	while (!update());
 }
 
 function togglePaused() {
 	// The game must be running to be pausable.
-	if (!running)
-		return;
-	
+	if (!running) return;
+
 	if (paused)
 		gameLoop = setInterval(run, updateInterval);
 	else
@@ -245,9 +254,7 @@ function togglePaused() {
 // This function handles all the game logic. It updates the tetromino's
 // position and checks for collisions.
 function update() {
-	if (!running || paused)
-		return;
-	
+	if (paused || !running) return;
 	for (var i = 0; i < 4; i++) {
 		if (y + tetros[curTet][r][i][Y] >= height - 1 ||
 				blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
@@ -320,16 +327,7 @@ function run() {
 
 newGame();
 
-// Need to draw before first update for the first tetromino to appear at the
-// very top.
-draw();
-
-var gameLoop = setInterval(run, updateInterval);
-
 document.onkeypress = function(e) {
-	if (!running)
-		return;
-	
 	switch (e.which) {
 	case 97: // 'a'
 		moveLeft();
