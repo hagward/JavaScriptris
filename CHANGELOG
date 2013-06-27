@@ -1,3 +1,7 @@
+v0.2.1, 2013-06-27
+----------------
+  * Now being able to restart the game without refreshing the page.
+
 v0.2, 2013-06-26
 ----------------
   * A new canvas showing the next upcoming tetromino was added.
