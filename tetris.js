@@ -108,7 +108,7 @@ function newGame() {
 		for (var j = 0; j < width; j++)
 			blocks[i][j] = -1;
 	
-	nextTet = getRandomInt(0, 6);
+	nextTet = Math.floor(Math.random() * 7);
 	newTetromino();
 
 	clearInterval(gameLoop);
@@ -123,8 +123,8 @@ function newGame() {
 // generating a new 'next' tetromino.
 function newTetromino() {
 	curTet = nextTet;
-	nextTet = getRandomInt(0, 6);
-	r = getRandomInt(0, tetros[curTet].length-1);
+	nextTet = Math.floor(Math.random() * 7);
+	r = Math.floor(Math.random() * tetros[curTet].length);
 	x = 4;
 	y = 2;
 	
@@ -161,10 +161,6 @@ function moveRight() {
 			return false;
 	x++;
 	return true;
-}
-
-function getRandomInt(min, max) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function rotate() {
