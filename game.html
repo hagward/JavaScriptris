@@ -6,6 +6,19 @@
 
 		<script src="/socket.io/socket.io.js"></script>
 		
+		<script type="text/javascript">
+			//Create socket.io connection
+			var socket = io.connect('/');
+ 
+			socket.on('onconnected', function(data) {
+		  		console.log('Connnected! ID:' + data.id);
+		  	});
+
+		  	socket.on('message', function(data){
+    			document.getElementById("playerCount").innerHTML = "Number of connected players: " + data.clients;
+  			});
+		</script>
+		
 		<link rel="shortcut icon"
 			href="https://dl.dropboxusercontent.com/u/334931/favicon.ico">
 		<style>
@@ -20,23 +33,36 @@
 				text-align: center;
 				margin-top: 4px;
 			}
-			canvas {
-				border: 1px dotted grey;
+			#content {
+				width: 610px;
 				margin: 0 auto;
 				display: block;
+			}
+			canvas {
+				border: 1px dotted grey;
 				width: 300px;
 			}
 		</style>
 	</head>
 	<body>
 		<div id="header">JavaScriptris v0.1</div>
-		<canvas id="a" width="300" height="480">
-			Your browser does not support canvas!
-		</canvas>
+
+		<div id="content">
+			<canvas id="a" width="300" height="480">
+				Your browser does not support canvas!
+			</canvas>
+
+			<canvas id="b" width="300" height="480">
+				Your browser does not support canvas!
+			</canvas>
+		</div>
+
+
 		<div id="footer">
 			Controls: wasd + space<br>
 			m = mono-/multicolor<br>
-			p = pause
+			p = pause<br>
+			<div id="playerCount">Number of connected players: </div>
 		</div>
 		<script type="text/javascript" src="tetris.js"></script>
 	</body>
