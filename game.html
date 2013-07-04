@@ -7,7 +7,7 @@
 		<script src="/socket.io/socket.io.js"></script>
 		
 		<script type="text/javascript">
-			//Create socket.io connection
+			// Create socket.io connection.
 			var socket = io.connect('/');
  
 			socket.on('onconnected', function(data) {
@@ -19,8 +19,7 @@
   			});
 		</script>
 		
-		<link rel="shortcut icon"
-			href="https://dl.dropboxusercontent.com/u/334931/favicon.ico">
+		<link rel="shortcut icon" href="./favicon.ico">
 		<style>
 			#header {
 				font: 13pt Tahoma;
@@ -38,7 +37,7 @@
 				margin: 0 auto;
 				display: block;
 			}
-			canvas {
+			.canvas_main {
 				border: 1px dotted grey;
 				width: 300px;
 			}
@@ -48,13 +47,12 @@
 		<div id="header">JavaScriptris v0.1</div>
 
 		<div id="content">
-			<canvas id="a" width="300" height="480">
+			<canvas id="maincanvas" class="canvas_main" width="300" height="480">
 				Your browser does not support canvas!
 			</canvas>
+			<canvas id="nexttetrocanvas" width="90" height="180" style="display: none"></canvas>
 
-			<canvas id="b" width="300" height="480">
-				Your browser does not support canvas!
-			</canvas>
+			<canvas id="b" class="canvas_main" width="300" height="480"></canvas>
 		</div>
 
 

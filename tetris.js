@@ -1,6 +1,6 @@
 ﻿/**
- * JavaScriptris v0.1 by Anders Hagward
- * Date: 2013-06-24
+ * JavaScriptris v0.2.1 by Anders Hagward
+ * Date: 2013-06-27
  *
  * The challenge was: how long time will it take to write a Tetris clone
  * stranded on a desolate island with only a laptop and an old smartphone,
@@ -9,14 +9,17 @@
  * morning.
  *
  * At first I used a list containing the locked blocks in order to be able to
- * render them more quickly (in contrast to looping through the 10*16 'grid'
+ * render them more quickly (in contrast to looping through the 10*16 'blocks'
  * matrix), but maintaining the list when deleting rows showed to be a bit
  * tricky. I then reckoned that was a completely unnecessary optimization and
  * saved myself from the headache. The score system is from the original Tetris
  * but the level system is completely improvised.
  *
- * It was a fun little project. Enjoy!
+ * Enjoy this fun little project!
  */
+
+ // todo: make block size relative to the canvas size
+ // todo: wall kicks
 
 var updateInterval = 1000;
 
@@ -29,21 +32,21 @@ var maxLevel = 99;
 var score = 0;
 var rowScores = [40, 100, 300, 1200];
 
-var monocolor = false;
+var monochrome = false;
 
 // Contains all 19 fixed tetrominoes. The first element in all lists is the
 // pivot element that the other blocks rotate around.
 var tetros = [
-	[[[0,0],[-1,0],[1,0],[2,0]], [[0,0],[0,-1],[0,1],[0,2]]],
-	[[[0,0],[1,0],[1,1],[0,1]]],
-	[[[0,0],[-1,0],[1,0],[0,1]], [[0,0],[0,-1],[0,1],[1,0]],
-			[[0,0],[-1,0],[1,0],[0,-1]], [[0,0],[0,-1],[0,1],[-1,0]]],
-	[[[0,0],[-1,0],[1,0],[1,1]], [[0,0],[0,-1],[0,1],[1,-1]],
-			[[0,0],[-1,0],[1,0],[-1,-1]], [[0,0],[0,-1],[0,1],[-1,1]]],
-	[[[0,0],[-1,0],[1,0],[-1,1]], [[0,0],[0,-1],[0,1],[1,1]],
-			[[0,0],[-1,0],[1,0],[1,-1]], [[0,0],[0,-1],[0,1],[-1,-1]]],
-	[[[0,0],[0,1],[-1,1],[1,0]], [[0,0],[0,-1],[1,0],[1,1]]],
-	[[[0,0],[-1,0],[0,1],[1,1]], [[0,0],[0,1],[1,0],[1,-1]]]
+	[[[0,0],[0,-1],[0,1],[0,2]], [[0,0],[-1,0],[1,0],[2,0]]], // I
+	[[[0,0],[1,0],[0,-1],[1,-1]]], // O
+	[[[0,0],[0,-1],[0,1],[1,0]], [[0,0],[-1,0],[1,0],[0,1]], // T
+			[[0,0],[0,-1],[0,1],[-1,0]], [[0,0],[-1,0],[1,0],[0,-1]]],
+	[[[0,0],[0,-1],[0,1],[1,-1]], [[0,0],[-1,0],[1,0],[1,1]], // J
+			[[0,0],[0,-1],[0,1],[-1,1]], [[0,0],[-1,0],[1,0],[-1,-1]]],
+	[[[0,0],[0,-1],[0,1],[1,1]], [[0,0],[-1,0],[1,0],[-1,1]], // L
+			[[0,0],[0,-1],[0,1],[-1,-1]], [[0,0],[-1,0],[1,0],[1,-1]]],
+	[[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]], // S
+	[[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]] // Z
 ]
 
 // Determines whether to show the moving tetromino or not.
@@ -62,72 +65,111 @@ Tetromino = {
 
 var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
 
-var c = document.getElementById('a');
-var ctx = c.getContext('2d');
+var c1 = document.getElementById('maincanvas');
+var c2 = document.getElementById('nexttetrocanvas');
+var ctx1 = c1.getContext('2d');
+var ctx2 = c2.getContext('2d');
 
 // Block size.
-var bsize = c.width / 10;
+var bsize = c1.width / 10;
 
 // Dimensions of the canvas in #blocks.
-var width = c.width / bsize;
-var height = c.height / bsize;
+var width = c1.width / bsize;
+var height = c1.height / bsize;
 
 // Initialize a two-dimensional array representing the board. A cell either has
 // the value -1 (uninitialized) or an index from the array 'colors',
 // representing a block of a certain color at that position.
-var grid = [];
+var blocks = [];
 for (var i = 0; i < height; i++) {
-	grid.push([]);
+	blocks.push([]);
 	for (var j = 0; j < width; j++)
-		grid[i].push(-1);
+		blocks[i].push(-1);
 }
 
 // A value between 0-7 (see Tetromino enum).
-var curTet;
+var curTet, nextTet;
 
 var x, y;
 
 // Rotation (i.e. "index in tetrominoes array").
 var r;
 
+var gameLoop;
+
+function newGame() {
+	level = 0;
+	score = 0;
+	running = true;
+	paused = false;
+
+	for (var i = 0; i < height; i++)
+		for (var j = 0; j < width; j++)
+			blocks[i][j] = -1;
+
+	nextTet = Math.floor(Math.random() * 7);
+	newTetromino();
+
+	clearInterval(gameLoop);
+	gameLoop = setInterval(run, updateInterval);
+
+	// Need to draw before first update for the first tetromino to appear at the
+	// very top.
+	draw();
+}
+
+// Creates a new tetromino by setting the 'next' one as the current and
+// generating a new 'next' tetromino.
+function newTetromino() {
+	curTet = nextTet;
+	nextTet = Math.floor(Math.random() * 7);
+	r = Math.floor(Math.random() * tetros[curTet].length);
+	x = 4;
+	y = 2;
+
+	// Move the block just below the ceiling.
+	for (var i = 0; i < 4; i++)
+		if (tetros[curTet][r][i][Y] < y)
+			y = tetros[curTet][r][i][Y];
+	y *= -1;
+
+	// Game over if the newly spawned tetromino starts on any old ones.
+	for (var i = 0; i < 4; i++) {
+		if (blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] > -1) {
+			gameOver();
+			return;
+		}
+	}
+}
+
 function moveLeft() {
-	if (paused)
-		return;
-	
+	if (paused || !running) return;
 	for (var i = 0; i < 4; i++)
 		if (x + tetros[curTet][r][i][X] <= 0
-				|| grid[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
+				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
 			return false;
 	x--;
 	return true;
 }
 
 function moveRight() {
-	if (paused)
-		return;
-	
+	if (paused || !running) return;
 	for (var i = 0; i < 4; i++)
 		if (x + tetros[curTet][r][i][X] >= width - 1
-				|| grid[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
+				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
 			return false;
 	x++;
 	return true;
 }
 
-function getRandomInt(min, max) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 function rotate() {
-	if (paused)
-		return;
-	
+	if (paused || !running) return;
 	var newRot = (r + 1) % tetros[curTet].length;
 	for (var i = 0; i < 4; i++) {
 		var newX = x + tetros[curTet][newRot][i][X];
 		var newY = y + tetros[curTet][newRot][i][Y];
 		if (newX < 0 || newX >= width || newY < 0 || newY >= height
-				|| grid[newY][newX] > -1)
+				|| blocks[newY][newX] > -1)
 			return false;
 	}
 	r = newRot;
@@ -137,7 +179,7 @@ function rotate() {
 // Save the last moving blocks as 'locked' blocks.
 function lockCurrent() {
 	for (var i = 0; i < 4; i++)
-		grid[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
+		blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
 }
 
 function checkRowsCompleted() {
@@ -145,34 +187,34 @@ function checkRowsCompleted() {
 	for (var i = 0; i < height; i++) {
 		var complete = true;
 		for (var j = 0; j < width; j++) {
-			if (grid[i][j] == -1) {
+			if (blocks[i][j] == -1) {
 				complete = false;
 				break;
 			}
 		}
 		if (complete) {
-			console.log('removing row #' + i);
-			
+			// console.log('removing row #' + i);
+
 			// Remove the row and insert a new zero:ed one at the beginning.
-			grid.splice(i, 1);
-			grid.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
+			blocks.splice(i, 1);
+			blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
 			n++;
 		}
 	}
-	
+
 	// Update the score and (possibly) the level.
 	if (n > 0) {
 		score += rowScores[n-1] * (level + 1);
-		
+
 		// Home-crafted formula for levelling up...
 		var newLevel = Math.floor(score/(200*(level+1)));
 		if (newLevel > level) {
-			console.log('new level: ' + level + ' -> ' + newLevel);
+			// console.log('new level: ' + level + ' -> ' + newLevel);
 			level = (newLevel < maxLevel) ? newLevel : maxLevel;
-			
+
 			var newInterval = updateInterval - 30 * level;
 			if (newInterval > 0) {
-				console.log('new update interval: ' + updateInterval + ' -> ' + newInterval);
+				// console.log('new update interval: ' + updateInterval + ' -> ' + newInterval);
 				updateInterval = newInterval;
 				clearInterval(gameLoop);
 				gameLoop = setInterval(run, updateInterval);
@@ -182,46 +224,21 @@ function checkRowsCompleted() {
 }
 
 function gameOver() {
-	console.log('game over');
+	// console.log('game over');
 	clearInterval(gameLoop);
 	running = false;
-	// alert('Game over! Well played! Good game!');
 }
 
-function newTetromino() {
-	curTet = getRandomInt(0, 6);
-	console.log('new tetromino #' + curTet);
-	r = getRandomInt(0, tetros[curTet].length-1);
-	x = 4;
-	y = 2;
-	
-	// Move the block just below the ceiling.
-	for (var i = 0; i < 4; i++)
-		if (tetros[curTet][r][i][Y] < y)
-			y = tetros[curTet][r][i][Y];
-	y *= -1;
-	
-	// Game over if the newly spawned tetromino starts on any old ones.
-	for (var i = 0; i < 4; i++) {
-		if (grid[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] > -1) {
-			gameOver();
-			return;
-		}
-	}
-}
-
+// Calls update() until the current tetromino reaches the bottom.
 function instaDrop() {
-	if (paused)
-		return;
-	
+	if (paused || !running) return;
 	while (!update());
 }
 
 function togglePaused() {
 	// The game must be running to be pausable.
-	if (!running)
-		return;
-	
+	if (!running) return;
+
 	if (paused)
 		gameLoop = setInterval(run, updateInterval);
 	else
@@ -229,14 +246,14 @@ function togglePaused() {
 	paused = !paused;
 }
 
+// This function handles all the game logic. It updates the tetromino's
+// position and checks for collisions.
 function update() {
-	if (!running || paused)
-		return;
-	
+	if (paused || !running) return;
 	for (var i = 0; i < 4; i++) {
 		if (y + tetros[curTet][r][i][Y] >= height - 1 ||
-				grid[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
-			console.log('tetromino has landed!');
+				blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
+			// console.log('tetromino has landed!');
 			lockCurrent();
 			checkRowsCompleted();
 			newTetromino();
@@ -248,45 +265,54 @@ function update() {
 }
 
 function draw() {
-	c.width = c.width; // clear canvas
-	
-	// Draw the score.
-	ctx.font = "bold 10pt Tahoma";
-	ctx.fillText("Score: " + score, 8, 18);
-	ctx.fillText("Level: " + level, c.width-60, 18);
-	
-	if (monocolor) ctx.fillStyle = 'black';
-	
+	c1.width = c1.width; // clear canvas
+	c2.width = c2.width;
+
+	if (monochrome) ctx1.fillStyle = 'black';
+
 	// Draw the locked tetrominos.
 	for (var i = 0; i < height; i++)
 		for (var j = 0; j < width; j++)
-			if (grid[i][j] > -1) {
-				if (!monocolor) ctx.fillStyle = colors[grid[i][j]];
-				ctx.fillRect(j*bsize, i*bsize, bsize, bsize);
+			if (blocks[i][j] > -1) {
+				if (!monochrome) ctx1.fillStyle = colors[blocks[i][j]];
+				ctx1.fillRect(j*bsize, i*bsize, bsize, bsize);
 			}
-	
-	// Draw the current moving tetromino.
+
 	if (running) {
-		if (!monocolor) ctx.fillStyle = colors[curTet];
-		for (var i = 0; i < 4; i++)
-			ctx.fillRect((x+tetros[curTet][r][i][X])*bsize,
+		if (!monochrome) ctx1.fillStyle = colors[curTet];
+		if (!monochrome) ctx2.fillStyle = colors[nextTet];
+		for (var i = 0; i < 4; i++) {
+			// Draw the current moving tetromino.
+			ctx1.fillRect((x+tetros[curTet][r][i][X])*bsize,
 					(y+tetros[curTet][r][i][Y])*bsize,
 					bsize, bsize);
-	} else { // Game over.
-		ctx.fillStyle = (monocolor) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
-		ctx.fillRect(0, 0, c.width, c.height);
-		ctx.fillStyle = "white";
-		ctx.font = "bold 30pt Tahoma";
-		ctx.fillText("GAME OVER", 30, 240);
+			// Draw the next tetromino.
+			ctx2.fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
+					3*bsize + tetros[nextTet][0][i][Y]*bsize,
+					bsize, bsize);
+		}
+	} else {
+		// Game over.
+		ctx1.fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
+		ctx1.fillRect(0, 0, c1.width, c1.height);
+		ctx1.fillStyle = "white";
+		ctx1.font = "bold 30pt Tahoma";
+		ctx1.fillText("GAME OVER", 30, 240);
 	}
-	
+
 	if (paused) {
-		ctx.fillStyle = (monocolor) ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.3)";
-		ctx.fillRect(0, 0, c.width, c.height);
-		ctx.fillStyle = "white";
-		ctx.font = "bold 30pt Tahoma";
-		ctx.fillText("PAUSED", 70, 240);
+		ctx1.fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.3)";
+		ctx1.fillRect(0, 0, c1.width, c1.height);
+		ctx1.fillStyle = "white";
+		ctx1.font = "bold 30pt Tahoma";
+		ctx1.fillText("PAUSED", 70, 240);
 	}
+
+	// Draw the score and level.
+	ctx1.fillStyle = 'black';
+	ctx1.font = "bold 10pt Tahoma";
+	ctx1.fillText("Score: " + score, 8, 18);
+	ctx1.fillText("Level: " + level, c1.width-60, 18);
 }
 
 function run() {
@@ -294,18 +320,9 @@ function run() {
 	draw();
 }
 
-newTetromino();
-
-// Need to draw before first update for the first tetromino to appear at the
-// very top.
-draw();
-
-var gameLoop = setInterval(run, updateInterval);
+newGame();
 
 document.onkeypress = function(e) {
-	if (!running)
-		return;
-	
 	switch (e.which) {
 	case 97: // 'a'
 		moveLeft();
@@ -325,8 +342,11 @@ document.onkeypress = function(e) {
 	case 112: // 'p'
 		togglePaused();
 		break;
+	case 114: // 'r'
+		newGame();
+		break;
 	case 109: // 'm'
-		monocolor = !monocolor;
+		monochrome = !monochrome;
 		break;
 	}
 	draw();
