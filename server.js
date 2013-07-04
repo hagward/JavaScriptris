@@ -12,10 +12,13 @@ var app = require('express')(),
 
 var UUID = require('node-uuid');
 
-// Start express server.
+//Start express server.
 server.listen(port);
 
+io.set('log level', 1);
+
 var numberOfClients = 0;
+var playerQueue = [];
 
 console.log('Server listening on port ' + port);
 
@@ -29,26 +32,64 @@ app.get('/*', function(req, res, next) {
     res.sendfile(__dirname + '/' + req.params[0]);
 });
 
-io.sockets.on('connection', function (client) {
-    numberOfClients++;
 
-    // Generate ID for new client.
+function findPlayerAndConnect(client) {
+    if (numberOfClients >= 2 && playerQueue.length >= 1) {
+        var connectClient = playerQueue.shift();
+
+        //Set and emit what player you connected to
+        connectClient.connectedTo = client;
+        client.connectedTo = connectClient;
+
+        connectClient.emit('foundPlayer', {id: client.userid});
+        client.emit('foundPlayer',{id: connectClient.userid});
+
+        console.log('Current queue size: ' + playerQueue.length);
+    } else {
+        playerQueue.push(client);
+        console.log('Current queue size: ' + playerQueue.length);
+    }
+}
+
+io.sockets.on('connection', function (client) {
+    // Increment and emit number of clients to everyone.
+    numberOfClients++;
+    io.sockets.emit('playerCountMessage', {clients: numberOfClients});
+
+    // Generate and set ID for new client.
     client.userid = UUID();
 
     // Emit ID to client.
     client.emit('onconnected', { id: client.userid } );
-
     console.log('Client connected: ' + client.userid);
+
+    //Find a player to connect to
+    findPlayerAndConnect(client);
 
     // On client disconnect:
     client.on('disconnect', function () {
         // Update and emit number of clients.
         numberOfClients--;
-        io.sockets.emit('message', {clients: numberOfClients});
+        io.sockets.emit('playerCountMessage', {clients: numberOfClients});
 
         console.log('Client disconnected: ' + client.userid );
+
+        // If currently in queue, remove self from queue.
+        var i = playerQueue.indexOf(client);
+        if (i != -1) {
+            playerQueue.splice(i, 1);
+            console.log('Current queue size: ' + playerQueue.length);
+        }
+
+        // If connected to someone, send playerDisconnect message to connected player.
+        if (client.connectedTo != null) {
+            client.connectedTo.emit('playerDisconnect', {id: client.userid});
+        }
     });
 
-    // Emit number of clients to everyone.
-    io.sockets.emit('message', {clients: numberOfClients});
+
+    // On client looking for new player:
+    client.on('searchingForPlayer',function (data) {
+        findPlayerAndConnect(client);
+    });
 });
