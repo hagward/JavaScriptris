@@ -1,5 +1,3 @@
-// TODO: have a queue with connections from where we can pair two and two as
-//       long as numClients >= 2
 // TODO: when two clients are paired, send some instruction to make them both
 //       run newGame(), and retrieve information about their starting blocks
 // TODO: forward keypress and block information between the two clients
@@ -12,7 +10,7 @@ var app = require('express')(),
 
 var UUID = require('node-uuid');
 
-//Start express server.
+// Start express server.
 server.listen(port);
 
 io.set('log level', 1);
@@ -23,21 +21,20 @@ var playerQueue = [];
 console.log('Server listening on port ' + port);
 
 // Forward to game.html.
-app.get('/', function(req, res) { 
+app.get('/', function (req, res) {
     res.sendfile(__dirname + '/game.html');
 });
 
 // Serve other files.
-app.get('/*', function(req, res, next) {
+app.get('/*', function (req, res, next) {
     res.sendfile(__dirname + '/' + req.params[0]);
 });
-
 
 function findPlayerAndConnect(client) {
     if (numberOfClients >= 2 && playerQueue.length >= 1) {
         var connectClient = playerQueue.shift();
 
-        //Set and emit what player you connected to
+        // Set and emit what player you connected to.
         connectClient.connectedTo = client;
         client.connectedTo = connectClient;
 
@@ -60,10 +57,10 @@ io.sockets.on('connection', function (client) {
     client.userid = UUID();
 
     // Emit ID to client.
-    client.emit('onconnected', { id: client.userid } );
+    client.emit('connected', {id: client.userid});
     console.log('Client connected: ' + client.userid);
 
-    //Find a player to connect to
+    // Find a player to connect to.
     findPlayerAndConnect(client);
 
     // On client disconnect:
@@ -72,7 +69,7 @@ io.sockets.on('connection', function (client) {
         numberOfClients--;
         io.sockets.emit('playerCountMessage', {clients: numberOfClients});
 
-        console.log('Client disconnected: ' + client.userid );
+        console.log('Client disconnected: ' + client.userid);
 
         // If currently in queue, remove self from queue.
         var i = playerQueue.indexOf(client);
@@ -82,14 +79,19 @@ io.sockets.on('connection', function (client) {
         }
 
         // If connected to someone, send playerDisconnect message to connected player.
-        if (client.connectedTo != null) {
+        if (client.connectedTo != null)
             client.connectedTo.emit('playerDisconnect', {id: client.userid});
-        }
     });
 
-
     // On client looking for new player:
-    client.on('searchingForPlayer',function (data) {
+    client.on('searchingForPlayer', function (data) {
         findPlayerAndConnect(client);
+    });
+
+    // On client spawns a new tetromino and wants to reveal information about
+    // it to the client's partner in crime.
+    client.on('newTetromino', function (data) {
+        if (client.connectedTo != null)
+            client.connectedTo.emit('newTetromino', data);
     });
 });

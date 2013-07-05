@@ -18,73 +18,94 @@
  * Enjoy this fun little project!
  */
 
- // todo: make block size relative to the canvas size
- // todo: wall kicks
+ // TODO: make (most of) the game variables arrays, indexable for P1 and P2.
+
+ // Create socket.io connection.
+var socket = io.connect('/');
+var userid = '';
 
 var updateInterval = 1000;
 
-// Constants for x and y indices in the block lists.
+var multiplayer = false;
+
+// Constants for x and y indices in the block lists, and for players.
 var X = 0;
 var Y = 1;
+var P1 = 0;
+var P2 = 1;
 
-var level = 0;
+Tetromino = {
+    I : 0,
+    O : 1,
+    T : 2,
+    J : 3,
+    L : 4,
+    S : 5,
+    Z : 6
+}
+
 var maxLevel = 99;
+var level = 0;
 var score = 0;
 var rowScores = [40, 100, 300, 1200];
 
 var monochrome = false;
 
-// Contains all 19 fixed tetrominoes. The first element in all lists is the
-// pivot element that the other blocks rotate around.
-var tetros = [
-	[[[0,0],[0,-1],[0,1],[0,2]], [[0,0],[-1,0],[1,0],[2,0]]], // I
-	[[[0,0],[1,0],[0,-1],[1,-1]]], // O
-	[[[0,0],[0,-1],[0,1],[1,0]], [[0,0],[-1,0],[1,0],[0,1]], // T
-			[[0,0],[0,-1],[0,1],[-1,0]], [[0,0],[-1,0],[1,0],[0,-1]]],
-	[[[0,0],[0,-1],[0,1],[1,-1]], [[0,0],[-1,0],[1,0],[1,1]], // J
-			[[0,0],[0,-1],[0,1],[-1,1]], [[0,0],[-1,0],[1,0],[-1,-1]]],
-	[[[0,0],[0,-1],[0,1],[1,1]], [[0,0],[-1,0],[1,0],[-1,1]], // L
-			[[0,0],[0,-1],[0,1],[-1,-1]], [[0,0],[-1,0],[1,0],[1,-1]]],
-	[[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]], // S
-	[[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]] // Z
-]
-
 // Determines whether to show the moving tetromino or not.
 var running = true;
 var paused = false;
 
-Tetromino = {
-	I : 0,
-	O : 1,
-	T : 2,
-	J : 3,
-	L : 4,
-	S : 5,
-	Z : 6
-}
-
+// Contains all 19 fixed tetrominoes. The first element in all lists is the
+// pivot element that the other blocks rotate around.
+var tetros = [
+    [[[0,0],[0,-1],[0,1],[0,2]], [[0,0],[-1,0],[1,0],[2,0]]], // I
+    [[[0,0],[1,0],[0,-1],[1,-1]]], // O
+    [[[0,0],[0,-1],[0,1],[1,0]], [[0,0],[-1,0],[1,0],[0,1]], // T
+            [[0,0],[0,-1],[0,1],[-1,0]], [[0,0],[-1,0],[1,0],[0,-1]]],
+    [[[0,0],[0,-1],[0,1],[1,-1]], [[0,0],[-1,0],[1,0],[1,1]], // J
+            [[0,0],[0,-1],[0,1],[-1,1]], [[0,0],[-1,0],[1,0],[-1,-1]]],
+    [[[0,0],[0,-1],[0,1],[1,1]], [[0,0],[-1,0],[1,0],[-1,1]], // L
+            [[0,0],[0,-1],[0,1],[-1,-1]], [[0,0],[-1,0],[1,0],[1,-1]]],
+    [[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]], // S
+    [[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]] // Z
+]
 var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
 
-var c1 = document.getElementById('maincanvas');
-var c2 = document.getElementById('nexttetrocanvas');
-var ctx1 = c1.getContext('2d');
-var ctx2 = c2.getContext('2d');
+var mainCanvas = [
+    document.getElementById('maincanvas_p1'),
+    document.getElementById('maincanvas_p2')
+];
+var nextCanvas = [
+    document.getElementById('nexttetrocanvas_p1'),
+    document.getElementById('nexttetrocanvas_p2')
+];
+var mainContext = [
+    mainCanvas[P1].getContext('2d'),
+    mainCanvas[P2].getContext('2d')
+];
+var nextContext = [
+    nextCanvas[P1].getContext('2d'),
+    nextCanvas[P2].getContext('2d')
+];
 
 // Block size.
-var bsize = c1.width / 10;
+var bsize = mainCanvas[P1].width / 10;
 
 // Dimensions of the canvas in #blocks.
-var width = c1.width / bsize;
-var height = c1.height / bsize;
+var width = mainCanvas[P1].width / bsize;
+var height = mainCanvas[P1].height / bsize;
 
 // Initialize a two-dimensional array representing the board. A cell either has
 // the value -1 (uninitialized) or an index from the array 'colors',
 // representing a block of a certain color at that position.
-var blocks = [];
+var blocks = [], blocksP2 = [];
 for (var i = 0; i < height; i++) {
-	blocks.push([]);
-	for (var j = 0; j < width; j++)
-		blocks[i].push(-1);
+    blocks.push([]);
+    blocksP2.push([]);
+    for (var j = 0; j < width; j++) {
+        blocks[i].push(-1);
+        blocksP2[i].push(-1);
+    }
 }
 
 // A value between 0-7 (see Tetromino enum).
@@ -98,256 +119,296 @@ var r;
 var gameLoop;
 
 function newGame() {
-	level = 0;
-	score = 0;
-	running = true;
-	paused = false;
+    level = 0;
+    score = 0;
+    running = true;
+    paused = false;
 
-	for (var i = 0; i < height; i++)
-		for (var j = 0; j < width; j++)
-			blocks[i][j] = -1;
+    // Clear the block arrays.
+    for (var i = 0; i < height; i++) {
+        for (var j = 0; j < width; j++) {
+            blocks[i][j] = -1;
+            blocksP2[i][j] = -1;
+        }
+    }
 
-	nextTet = Math.floor(Math.random() * 7);
-	newTetromino();
+    nextTet = Math.floor(Math.random() * 7);
+    newTetromino();
 
-	clearInterval(gameLoop);
-	gameLoop = setInterval(run, updateInterval);
+    clearInterval(gameLoop);
+    gameLoop = setInterval(run, updateInterval);
 
-	// Need to draw before first update for the first tetromino to appear at the
-	// very top.
-	draw();
+    // Need to draw before first update for the first tetromino to appear at the
+    // very top.
+    draw();
 }
 
 // Creates a new tetromino by setting the 'next' one as the current and
 // generating a new 'next' tetromino.
 function newTetromino() {
-	curTet = nextTet;
-	nextTet = Math.floor(Math.random() * 7);
-	r = Math.floor(Math.random() * tetros[curTet].length);
-	x = 4;
-	y = 2;
+    curTet = nextTet;
+    nextTet = Math.floor(Math.random() * 7);
+    r = Math.floor(Math.random() * tetros[curTet].length);
+    x = 4;
+    y = 2;
 
-	// Move the block just below the ceiling.
-	for (var i = 0; i < 4; i++)
-		if (tetros[curTet][r][i][Y] < y)
-			y = tetros[curTet][r][i][Y];
-	y *= -1;
+    // Move the block just below the ceiling.
+    for (var i = 0; i < 4; i++)
+        if (tetros[curTet][r][i][Y] < y)
+            y = tetros[curTet][r][i][Y];
+    y *= -1;
 
-	// Game over if the newly spawned tetromino starts on any old ones.
-	for (var i = 0; i < 4; i++) {
-		if (blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] > -1) {
-			gameOver();
-			return;
-		}
-	}
+    // Game over if the newly spawned tetromino starts on any old ones.
+    if (checkStartsWithCollision(blocks)) {
+        gameOver();
+        return;
+    }
+
+    socket.emit('newTetromino');
 }
 
 function moveLeft() {
-	if (paused || !running) return;
-	for (var i = 0; i < 4; i++)
-		if (x + tetros[curTet][r][i][X] <= 0
-				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
-			return false;
-	x--;
-	return true;
+    if (paused || !running) return;
+    for (var i = 0; i < 4; i++)
+        if (x + tetros[curTet][r][i][X] <= 0
+                || blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
+            return false;
+    x--;
+    return true;
 }
 
 function moveRight() {
-	if (paused || !running) return;
-	for (var i = 0; i < 4; i++)
-		if (x + tetros[curTet][r][i][X] >= width - 1
-				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
-			return false;
-	x++;
-	return true;
+    if (paused || !running) return;
+    for (var i = 0; i < 4; i++)
+        if (x + tetros[curTet][r][i][X] >= width - 1
+                || blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
+            return false;
+    x++;
+    return true;
 }
 
 function rotate() {
-	if (paused || !running) return;
-	var newRot = (r + 1) % tetros[curTet].length;
-	for (var i = 0; i < 4; i++) {
-		var newX = x + tetros[curTet][newRot][i][X];
-		var newY = y + tetros[curTet][newRot][i][Y];
-		if (newX < 0 || newX >= width || newY < 0 || newY >= height
-				|| blocks[newY][newX] > -1)
-			return false;
-	}
-	r = newRot;
-	return true;
+    if (paused || !running) return;
+    var newRot = (r + 1) % tetros[curTet].length;
+    for (var i = 0; i < 4; i++) {
+        var newX = x + tetros[curTet][newRot][i][X];
+        var newY = y + tetros[curTet][newRot][i][Y];
+        if (newX < 0 || newX >= width || newY < 0 || newY >= height
+                || blocks[newY][newX] > -1)
+            return false;
+    }
+    r = newRot;
+    return true;
 }
 
 // Save the last moving blocks as 'locked' blocks.
 function lockCurrent() {
-	for (var i = 0; i < 4; i++)
-		blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
+    for (var i = 0; i < 4; i++)
+        blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
 }
 
 function checkRowsCompleted() {
-	var n = 0;
-	for (var i = 0; i < height; i++) {
-		var complete = true;
-		for (var j = 0; j < width; j++) {
-			if (blocks[i][j] == -1) {
-				complete = false;
-				break;
-			}
-		}
-		if (complete) {
-			// console.log('removing row #' + i);
+    var n = 0;
+    for (var i = 0; i < height; i++) {
+        var complete = true;
+        for (var j = 0; j < width; j++) {
+            if (blocks[i][j] == -1) {
+                complete = false;
+                break;
+            }
+        }
+        if (complete) {
+            // console.log('removing row #' + i);
 
-			// Remove the row and insert a new zero:ed one at the beginning.
-			blocks.splice(i, 1);
-			blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
-			n++;
-		}
-	}
+            // Remove the row and insert a new zero:ed one at the beginning.
+            blocks.splice(i, 1);
+            blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
+            n++;
+        }
+    }
 
-	// Update the score and (possibly) the level.
-	if (n > 0) {
-		score += rowScores[n-1] * (level + 1);
+    // Update the score and (possibly) the level.
+    if (n > 0) {
+        score += rowScores[n-1] * (level + 1);
 
-		// Home-crafted formula for levelling up...
-		var newLevel = Math.floor(score/(200*(level+1)));
-		if (newLevel > level) {
-			// console.log('new level: ' + level + ' -> ' + newLevel);
-			level = (newLevel < maxLevel) ? newLevel : maxLevel;
+        // Home-crafted formula for levelling up...
+        var newLevel = Math.floor(score/(200*(level+1)));
+        if (newLevel > level) {
+            level = (newLevel < maxLevel) ? newLevel : maxLevel;
 
-			var newInterval = updateInterval - 30 * level;
-			if (newInterval > 0) {
-				// console.log('new update interval: ' + updateInterval + ' -> ' + newInterval);
-				updateInterval = newInterval;
-				clearInterval(gameLoop);
-				gameLoop = setInterval(run, updateInterval);
-			}
-		}
-	}
+            var newInterval = updateInterval - 30 * level;
+            if (newInterval > 0) {
+                updateInterval = newInterval;
+                clearInterval(gameLoop);
+                gameLoop = setInterval(run, updateInterval);
+            }
+        }
+    }
 }
 
 function gameOver() {
-	// console.log('game over');
-	clearInterval(gameLoop);
-	running = false;
+    clearInterval(gameLoop);
+    running = false;
 }
 
 // Calls update() until the current tetromino reaches the bottom.
 function instaDrop() {
-	if (paused || !running) return;
-	while (!update());
+    if (paused || !running) return;
+    while (!update());
 }
 
 function togglePaused() {
-	// The game must be running to be pausable.
-	if (!running) return;
+    // The game must be running to be pausable.
+    if (!running) return;
 
-	if (paused)
-		gameLoop = setInterval(run, updateInterval);
-	else
-		clearInterval(gameLoop);
-	paused = !paused;
+    if (paused)
+        gameLoop = setInterval(run, updateInterval);
+    else
+        clearInterval(gameLoop);
+    paused = !paused;
+}
+
+// Checks if the newly spawned tetromino collides with previous ones.
+function checkStartsWithCollision(b) {
+    for (var i = 0; i < 4; i++)
+        if (b[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] > -1)
+            return true;
+    return false;
 }
 
 // This function handles all the game logic. It updates the tetromino's
 // position and checks for collisions.
 function update() {
-	if (paused || !running) return;
-	for (var i = 0; i < 4; i++) {
-		if (y + tetros[curTet][r][i][Y] >= height - 1 ||
-				blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
-			// console.log('tetromino has landed!');
-			lockCurrent();
-			checkRowsCompleted();
-			newTetromino();
-			return true;
-		}
-	}	
-	y++;
-	return false;
+    if (paused || !running) return;
+    for (var i = 0; i < 4; i++) {
+        if (y + tetros[curTet][r][i][Y] >= height - 1 ||
+                blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
+            lockCurrent();
+            checkRowsCompleted();
+            newTetromino();
+            return true;
+        }
+    }    
+    y++;
+    return false;
+}
+
+function clearCanvases() {
+	mainCanvas[P1].width = mainCanvas[P1].width;
+	mainCanvas[P2].width = mainCanvas[P2].width;
+	nextCanvas[P1].width = nextCanvas[P1].width;
+	nextCanvas[P2].width = nextCanvas[P2].width;
 }
 
 function draw() {
-	c1.width = c1.width; // clear canvas
-	c2.width = c2.width;
+	clearCanvases();
 
-	if (monochrome) ctx1.fillStyle = 'black';
+	mainContext[P1].fillStyle = 'black';
 
-	// Draw the locked tetrominos.
-	for (var i = 0; i < height; i++)
-		for (var j = 0; j < width; j++)
-			if (blocks[i][j] > -1) {
-				if (!monochrome) ctx1.fillStyle = colors[blocks[i][j]];
-				ctx1.fillRect(j*bsize, i*bsize, bsize, bsize);
-			}
+    // Draw the locked tetrominos.
+    for (var i = 0; i < height; i++)
+        for (var j = 0; j < width; j++)
+            if (blocks[i][j] > -1) {
+                if (!monochrome) mainContext[P1].fillStyle = colors[blocks[i][j]];
+                mainContext[P1].fillRect(j*bsize, i*bsize, bsize, bsize);
+            }
 
-	if (running) {
-		if (!monochrome) ctx1.fillStyle = colors[curTet];
-		if (!monochrome) ctx2.fillStyle = colors[nextTet];
-		for (var i = 0; i < 4; i++) {
-			// Draw the current moving tetromino.
-			ctx1.fillRect((x+tetros[curTet][r][i][X])*bsize,
-					(y+tetros[curTet][r][i][Y])*bsize,
-					bsize, bsize);
-			// Draw the next tetromino.
-			ctx2.fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
-					3*bsize + tetros[nextTet][0][i][Y]*bsize,
-					bsize, bsize);
-		}
-	} else {
-		// Game over.
-		ctx1.fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
-		ctx1.fillRect(0, 0, c1.width, c1.height);
-		ctx1.fillStyle = "white";
-		ctx1.font = "bold 30pt Tahoma";
-		ctx1.fillText("GAME OVER", 30, 240);
-	}
+    if (running) {
+        if (!monochrome) mainContext[P1].fillStyle = colors[curTet];
+        if (!monochrome) nextContext[P1].fillStyle = colors[nextTet];
+        for (var i = 0; i < 4; i++) {
+            // Draw the current moving tetromino.
+            mainContext[P1].fillRect((x+tetros[curTet][r][i][X])*bsize,
+                    (y+tetros[curTet][r][i][Y])*bsize,
+                    bsize, bsize);
+            // Draw the next tetromino.
+            nextContext[P1].fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
+                    3*bsize + tetros[nextTet][0][i][Y]*bsize,
+                    bsize, bsize);
+        }
+    } else {
+        // Game over.
+        mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
+        mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
+        mainContext[P1].fillStyle = "white";
+        mainContext[P1].font = "bold 30pt Tahoma";
+        mainContext[P1].fillText("GAME OVER", 30, 240);
+    }
 
-	if (paused) {
-		ctx1.fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.3)";
-		ctx1.fillRect(0, 0, c1.width, c1.height);
-		ctx1.fillStyle = "white";
-		ctx1.font = "bold 30pt Tahoma";
-		ctx1.fillText("PAUSED", 70, 240);
-	}
+    if (paused) {
+        mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.3)";
+        mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
+        mainContext[P1].fillStyle = "white";
+        mainContext[P1].font = "bold 30pt Tahoma";
+        mainContext[P1].fillText("PAUSED", 70, 240);
+    }
 
-	// Draw the score and level.
-	ctx1.fillStyle = 'black';
-	ctx1.font = "bold 10pt Tahoma";
-	ctx1.fillText("Score: " + score, 8, 18);
-	ctx1.fillText("Level: " + level, c1.width-60, 18);
+    // Draw the score and level.
+    mainContext[P1].fillStyle = 'black';
+    mainContext[P1].font = "bold 10pt Tahoma";
+    mainContext[P1].fillText("Score: " + score, 8, 18);
+    mainContext[P1].fillText("Level: " + level, mainCanvas[P1].width-60, 18);
 }
 
 function run() {
-	update();
-	draw();
+    update();
+    draw();
 }
 
 newGame();
 
 document.onkeypress = function(e) {
-	switch (e.which) {
-	case 97: // 'a'
-		moveLeft();
-		break;
-	case 100: // 'd'
-		moveRight();
-		break;
-	case 115: // 's'
-		update(); // move down
-		break;
-	case 119: // 'w'
-		rotate();
-		break;
-	case 32: // space
-		instaDrop();
-		break;
-	case 112: // 'p'
-		togglePaused();
-		break;
-	case 114: // 'r'
-		newGame();
-		break;
-	case 109: // 'm'
-		monochrome = !monochrome;
-		break;
-	}
-	draw();
+    switch (e.which) {
+    case 97: // 'a'
+        moveLeft();
+        break;
+    case 100: // 'd'
+        moveRight();
+        break;
+    case 115: // 's'
+        update(); // move down
+        break;
+    case 119: // 'w'
+        rotate();
+        break;
+    case 32: // space
+        instaDrop();
+        break;
+    case 112: // 'p'
+        togglePaused();
+        break;
+    case 114: // 'r'
+        newGame();
+        break;
+    case 109: // 'm'
+        monochrome = !monochrome;
+        break;
+    }
+    draw();
 }
+
+socket.on('connected', function (data) {
+    document.getElementById("playerID").innerHTML = "My ID: <b>" + data.id + "</b>";
+});
+
+socket.on('playerCountMessage', function (data){
+    document.getElementById("playerCount").innerHTML = "Number of connected players: " + data.clients;
+});
+
+socket.on('foundPlayer', function (data) {
+    document.getElementById("connectedToPlayer").innerHTML = "Connected to player " + data.id;
+    userid = data.id;
+    newGame();
+    socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
+});
+
+socket.on('playerDisconnect', function (data) {
+    document.getElementById("connectedToPlayer").innerHTML = "Not connected to a player.";
+    socket.emit("searchingForPlayer", {id: userid});
+});
+
+// TODO: update the game to show the other player's tetromino(s).
+socket.on('newTetromino', function (data) {
+	multiplayer = true;
+	console.log('The other guy spawned a new thing!');
+});

@@ -1,82 +1,61 @@
 ﻿<!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8">
-		<title>JavaScriptris</title>
+    <head>
+        <meta charset="UTF-8">
+        <title>JavaScriptris</title>
+        <link rel="shortcut icon" href="./favicon.ico">
+        <style>
+            #header {
+                font: 13pt Tahoma;
+                text-align: center;
+                margin-bottom: 4px;
+            }
+            #footer {
+                font: 8pt Tahoma;
+                color: grey;
+                text-align: center;
+                margin-top: 4px;
+            }
+            #content {
+                width: 844px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .canvas_main {
+            	float: left;
+                border: 1px dotted grey;
+                width: 300px;
+            }
+            .canvas_next {
+            	float: left;
+            	width: 120px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="header">JavaScriptris Multiplayer v0.0.1</div>
 
-		<script src="/socket.io/socket.io.js"></script>
-		
-		<script type="text/javascript">
-			// Create socket.io connection.
-			var socket = io.connect('/');
-			var userid = "";
- 
-			socket.on('onconnected', function(data) {
-		  		document.getElementById("playerID").innerHTML = "My ID: <b>" + data.id + "</b>";
-		  	});
+        <div id="content">
+        	<canvas id="nexttetrocanvas_p1" class="canvas_next" width="120" height="180"></canvas>
+            <canvas id="maincanvas_p1" class="canvas_main" width="300" height="480">
+                Your browser does not support canvas!
+            </canvas>
+            <canvas id="maincanvas_p2" class="canvas_main" width="300" height="480"></canvas>
+            <canvas id="nexttetrocanvas_p2" class="canvas_next" width="120" height="180"></canvas>
+            <div style="clear: both"></div>
+        </div>
 
-		  	socket.on('playerCountMessage', function(data){
-    			document.getElementById("playerCount").innerHTML = "Number of connected players: " + data.clients;
-  			});
+        <div id="footer">
+            Controls: wasd + space<br>
+            m = mono-/multicolor<br>
+            p = pause<br>
+            <div id="playerCount">Number of connected players: </div><br>
+            <div id="playerID">Not assigned id.</div>
+            <div id="connectedToPlayer">Not connected to a player.</div>
+        </div>
 
-  			socket.on('foundPlayer', function (data) {
-  				document.getElementById("connectedToPlayer").innerHTML = "Connected to player " + data.id;
-  				userid = data.id;
-  			});
-
-
-  			socket.on('playerDisconnect', function (data) {
-  				document.getElementById("connectedToPlayer").innerHTML = "Not connected to a player.";
-
-  				socket.emit("searchingForPlayer", {id: userid});
-  			});
-		</script>
-		
-		<link rel="shortcut icon" href="./favicon.ico">
-		<style>
-			#header {
-				font: 13pt Tahoma;
-				text-align: center;
-				margin-bottom: 4px;
-			}
-			#footer {
-				font: 8pt Tahoma;
-				color: grey;
-				text-align: center;
-				margin-top: 4px;
-			}
-			#content {
-				width: 610px;
-				margin: 0 auto;
-				display: block;
-			}
-			.canvas_main {
-				border: 1px dotted grey;
-				width: 300px;
-			}
-		</style>
-	</head>
-	<body>
-		<div id="header">JavaScriptris Multiplayer v0.0.1</div>
-
-		<div id="content">
-			<canvas id="maincanvas" class="canvas_main" width="300" height="480">
-				Your browser does not support canvas!
-			</canvas>
-			<canvas id="nexttetrocanvas" width="90" height="180" style="display: none"></canvas>
-
-			<canvas id="b" class="canvas_main" width="300" height="480"></canvas>
-		</div>
-
-
-		<div id="footer">
-			Controls: wasd + space<br>
-			m = mono-/multicolor<br>
-			p = pause<br>
-			<div id="playerCount">Number of connected players: </div><br>
-			<div id="playerID">Not assigned id.</div>
-			<div id="connectedToPlayer">Not connected to a player.</div>
-		</div>
-		<script type="text/javascript" src="tetris.js"></script>
-	</body>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="tetris.js"></script>
+        <script src="client.js"></script>
+    </body>
 </html>
