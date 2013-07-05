@@ -20,10 +20,6 @@
 
  // TODO: make (most of) the game variables arrays, indexable for P1 and P2.
 
- // Create socket.io connection.
-var socket = io.connect('/');
-var userid = '';
-
 var updateInterval = 1000;
 
 var multiplayer = false;
@@ -52,8 +48,9 @@ var rowScores = [40, 100, 300, 1200];
 var monochrome = false;
 
 // Determines whether to show the moving tetromino or not.
-var running = true;
+var running = false;
 var paused = false;
+var waiting = true;
 
 // Contains all 19 fixed tetrominoes. The first element in all lists is the
 // pivot element that the other blocks rotate around.
@@ -123,6 +120,7 @@ function newGame() {
     score = 0;
     running = true;
     paused = false;
+    waiting = false;
 
     // Clear the block arrays.
     for (var i = 0; i < height; i++) {
@@ -164,7 +162,7 @@ function newTetromino() {
         return;
     }
 
-    socket.emit('newTetromino');
+    socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
 }
 
 function moveLeft() {
@@ -205,6 +203,10 @@ function rotate() {
 function lockCurrent() {
     for (var i = 0; i < 4; i++)
         blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
+
+    
+    // Emit the locked blocks. Probably horribly inefficient, yeah?
+    socket.emit('lockedBlocks', {blocks: blocks});
 }
 
 function checkRowsCompleted() {
@@ -253,7 +255,7 @@ function gameOver() {
 
 // Calls update() until the current tetromino reaches the bottom.
 function instaDrop() {
-    if (paused || !running) return;
+    if (paused || !running || waiting) return;
     while (!update());
 }
 
@@ -279,17 +281,19 @@ function checkStartsWithCollision(b) {
 // This function handles all the game logic. It updates the tetromino's
 // position and checks for collisions.
 function update() {
-    if (paused || !running) return;
+    if (paused || !running || waiting) return;
     for (var i = 0; i < 4; i++) {
         if (y + tetros[curTet][r][i][Y] >= height - 1 ||
                 blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
             lockCurrent();
             checkRowsCompleted();
             newTetromino();
+
             return true;
         }
     }    
     y++;
+
     return false;
 }
 
@@ -304,14 +308,22 @@ function draw() {
 	clearCanvases();
 
 	mainContext[P1].fillStyle = 'black';
+    mainContext[P2].fillStyle = 'black';
 
-    // Draw the locked tetrominos.
+    // Draw the locked tetrominos for P1 and P2.
     for (var i = 0; i < height; i++)
-        for (var j = 0; j < width; j++)
+        for (var j = 0; j < width; j++) {
             if (blocks[i][j] > -1) {
                 if (!monochrome) mainContext[P1].fillStyle = colors[blocks[i][j]];
                 mainContext[P1].fillRect(j*bsize, i*bsize, bsize, bsize);
             }
+
+            if (blocksP2[i][j] > -1) {
+                if (!monochrome) mainContext[P2].fillStyle = colors[blocksP2[i][j]];
+                mainContext[P2].fillRect(j*bsize, i*bsize, bsize, bsize);
+            }
+
+        }
 
     if (running) {
         if (!monochrome) mainContext[P1].fillStyle = colors[curTet];
@@ -327,12 +339,22 @@ function draw() {
                     bsize, bsize);
         }
     } else {
-        // Game over.
-        mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
-        mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
-        mainContext[P1].fillStyle = "white";
-        mainContext[P1].font = "bold 30pt Tahoma";
-        mainContext[P1].fillText("GAME OVER", 30, 240);
+
+        if (waiting) {
+            // Waiting for other player to connect.
+            mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 255, 0.3)";
+            mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
+            mainContext[P1].fillStyle = "white";
+            mainContext[P1].font = "bold 18pt Tahoma";
+            mainContext[P1].fillText("WAITING FOR PLAYER", 10, 240);
+        } else {
+            // Game over.
+            mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
+            mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
+            mainContext[P1].fillStyle = "white";
+            mainContext[P1].font = "bold 30pt Tahoma";
+            mainContext[P1].fillText("GAME OVER", 30, 240);
+        }
     }
 
     if (paused) {
@@ -342,6 +364,8 @@ function draw() {
         mainContext[P1].font = "bold 30pt Tahoma";
         mainContext[P1].fillText("PAUSED", 70, 240);
     }
+
+
 
     // Draw the score and level.
     mainContext[P1].fillStyle = 'black';
@@ -354,8 +378,6 @@ function run() {
     update();
     draw();
 }
-
-newGame();
 
 document.onkeypress = function(e) {
     switch (e.which) {
@@ -387,28 +409,3 @@ document.onkeypress = function(e) {
     draw();
 }
 
-socket.on('connected', function (data) {
-    document.getElementById("playerID").innerHTML = "My ID: <b>" + data.id + "</b>";
-});
-
-socket.on('playerCountMessage', function (data){
-    document.getElementById("playerCount").innerHTML = "Number of connected players: " + data.clients;
-});
-
-socket.on('foundPlayer', function (data) {
-    document.getElementById("connectedToPlayer").innerHTML = "Connected to player " + data.id;
-    userid = data.id;
-    newGame();
-    socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
-});
-
-socket.on('playerDisconnect', function (data) {
-    document.getElementById("connectedToPlayer").innerHTML = "Not connected to a player.";
-    socket.emit("searchingForPlayer", {id: userid});
-});
-
-// TODO: update the game to show the other player's tetromino(s).
-socket.on('newTetromino', function (data) {
-	multiplayer = true;
-	console.log('The other guy spawned a new thing!');
-});

@@ -10,7 +10,7 @@ var app = require('express')(),
 
 var UUID = require('node-uuid');
 
-// Start express server.
+//Start express server.
 server.listen(port);
 
 io.set('log level', 1);
@@ -93,5 +93,10 @@ io.sockets.on('connection', function (client) {
     client.on('newTetromino', function (data) {
         if (client.connectedTo != null)
             client.connectedTo.emit('newTetromino', data);
+    });
+
+    client.on('lockedBlocks', function (data) {
+        if (client.connectedTo != null)
+            client.connectedTo.emit('lockedBlocks', data);
     });
 });
