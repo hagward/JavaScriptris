@@ -21,6 +21,16 @@
                 margin: 0 auto;
                 padding: 20px;
             }
+            #lobby {
+                width: 500px;
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            #messageArea {
+                width: 500px;
+                resize: none;
+            }
             .canvas_main {
             	float: left;
                 border: 1px dotted grey;
@@ -54,8 +64,21 @@
             <div id="connectedToPlayer">Not connected to a player.</div>
         </div>
 
+        <div id="lobby">
+            <textarea id="messageArea" readonly rows="5">
+                --JavaScriptris Multiplayer--</textarea>
+
+            Message: <input type="text" id="message" value="" 
+            onkeypress="keyPress(event);"><br>
+
+            <button id="sendButton" type="button" onclick="sendMessage()">Send</button>
+            <button id="readyButton" type="button" onclick="sendReady()">I'm ready!</button>
+        </div>
+
+
         <script src="/socket.io/socket.io.js"></script>
         <script src="tetris.js"></script>
         <script src="client.js"></script>
+        <script src="lobby.js"></script>
     </body>
 </html>

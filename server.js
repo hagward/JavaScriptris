@@ -10,7 +10,14 @@ var app = require('express')(),
 
 var UUID = require('node-uuid');
 
-//Start express server.
+MessageType = {
+    ChatMessage : 0,
+    ReadyMessage : 1,
+    StartMessage : 2,
+    GameoverMessage : 3
+}
+
+//  Start express server.
 server.listen(port);
 
 io.set('log level', 1);
@@ -98,5 +105,25 @@ io.sockets.on('connection', function (client) {
     client.on('lockedBlocks', function (data) {
         if (client.connectedTo != null)
             client.connectedTo.emit('lockedBlocks', data);
+    });
+
+    // On client recieves lobbymessages.
+    client.on('lobbyMessage', function (data) {
+        switch(data.type) {
+            case MessageType.ChatMessage:
+            case MessageType.ReadyMessage:
+            case MessageType.GameoverMessage:
+                // Resend to connected client.
+                if (client.connectedTo != null)
+                    client.connectedTo.emit('lobbyMessage', data);
+                break;
+            case MessageType.StartMessage:
+                // Send to both...
+                if (client.connectedTo != null) {
+                    client.connectedTo.emit('lobbyMessage', data);
+                    client.emit('lobbyMessage',data);
+                }
+                break;    
+        }
     });
 });
