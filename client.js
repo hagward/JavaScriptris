@@ -3,15 +3,29 @@ var socket = io.connect('/');
 var userid = '';
 
 var ready = false;
-var strangerready = false;
+var strangerReady = false;
 
 MessageType = {
     ChatMessage : 0,
     ReadyMessage : 1,
     StartMessage : 2,
-    GameoverMessage : 3
+    GameoverMessage : 3,
+    NewTetrominoMessage : 4,
+    MoveLeftMessage : 5,
+    MoveRightMessage : 6,
+    RotateMessage : 7,
+    LockBlocksMessage : 8,
+    DeleteRowMessage : 9,
+    MoveDownMessage : 10
 }
 
+// Emit gameover message and reset ready.
+function emitGameover() {
+    addMessage('STRANGER WON!','System');
+    ready = false;
+    strangerReady = false;
+    socket.emit('lobbyMessage', {type: MessageType.GameoverMessage, id: userid});
+}
 
 socket.on('connected', function (data) {
     document.getElementById("playerID").innerHTML = "My ID: <b>" + data.id + "</b>";
@@ -54,7 +68,7 @@ socket.on('playerDisconnect', function (data) {
 
     // Reset ready...
     ready = false;
-    strangerready = false;
+    strangerReady = false;
 
     // And disable lobby buttons.
     document.getElementById('sendButton').disabled = true; 
@@ -63,57 +77,69 @@ socket.on('playerDisconnect', function (data) {
 
 // On recieving lobbyMessages
 socket.on('lobbyMessage', function (data) {
-    switch(data.type) {
-        case MessageType.ChatMessage:
-            // Recieved chatmessage from other player, add it to the TextArea
-            addMessage(data.message,'Stranger');
-            break;
-        case MessageType.GameoverMessage:
-            addMessage('YOU WON!','System');
+    switch (data.type) {
+    case MessageType.ChatMessage:
+        // Recieved chatmessage from other player, add it to the TextArea
+        addMessage(data.message,'Stranger');
+        break;
+    case MessageType.GameoverMessage:
+        addMessage('YOU WON!','System');
 
-            state = GameState.Gamewon;
+        state = GameState.Gamewon;
 
-            ready = false;
-            strangerready = false;
-            break;
-        case MessageType.StartMessage:
-            addMessage('Starting new game...','System');
+        ready = false;
+        strangerReady = false;
+        break;
+    case MessageType.StartMessage:
+        addMessage('Starting new game...','System');
 
-            // Not waiting anymore, start game.
-            state = GameState.Running;
-            newGame();
+        // Not waiting anymore, start game.
+        state = GameState.Running;
+        newGame();
 
-            socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
-            break;
-        case MessageType.ReadyMessage:
-            addMessage('Stranger is ready!','System');
-            strangerready = true;
-            
-            if (ready)
-                socket.emit('lobbyMessage',{type: MessageType.StartMessage, id: userid});
-            break;
+        socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
+        break;
+    case MessageType.ReadyMessage:
+        addMessage('Stranger is ready!','System');
+        strangerReady = true;
+        
+        if (ready)
+            socket.emit('lobbyMessage',{type: MessageType.StartMessage, id: userid});
+        break;
     }
 });
 
-// Emit gameover message and reset ready.
-function emitGameover() {
-    addMessage('STRANGER WON!','System');
-    ready = false;
-    strangerready = false;
-    socket.emit('lobbyMessage', {type: MessageType.GameoverMessage, id: userid});
-}
-
-
-// TODO: update the game to show the other player's tetromino(s).
-socket.on('newTetromino', function (data) {
-	multiplayer = true;
-	console.log('The other guy spawned a new thing! ');
-
-    
+// TODO: The values received from Player 2 should probably checked in some way.
+socket.on('gameMessage', function (data) {
+    console.log('RECEIVED gameMessage: ' + data.type);
+    switch (data.type) {
+    // The other player spawned a new tetromino:
+    case MessageType.NewTetrominoMessage:
+        curTetP2 = data.current;
+        nextTetP2 = data.next;
+        rP2 = data.rotation;
+        xP2 = data.xPos;
+        yP2 = data.yPos;
+        break;
+    case MessageType.MoveLeftMessage:
+        xP2--;
+        break;
+    case MessageType.MoveRightMessage:
+        xP2++;
+        break;
+    case MessageType.RotateMessage:
+        rP2 = data.rotation;
+        break;
+    case MessageType.LockBlocksMessage:
+        blocksP2 = data.blocks;
+        break;
+    case MessageType.DeleteRowMessage:
+        blocksP2.splice(data.row, 1);
+        blocksP2.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
+        break;
+    case MessageType.MoveDownMessage:
+        yP2++;
+        break;
+    }
+    draw();
 });
-
-// Set recieved blocks as the second players locked blocks.
-socket.on('lockedBlocks', function (data) {
-    blocksP2 = data.blocks;
-});
-

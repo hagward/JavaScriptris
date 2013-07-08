@@ -18,8 +18,6 @@
  * Enjoy this fun little project!
  */
 
- // TODO: make (most of) the game variables arrays, indexable for P1 and P2.
-
 var updateInterval = 1000;
 
 var multiplayer = false;
@@ -29,16 +27,6 @@ var X = 0;
 var Y = 1;
 var P1 = 0;
 var P2 = 1;
-
-Tetromino = {
-    I : 0,
-    O : 1,
-    T : 2,
-    J : 3,
-    L : 4,
-    S : 5,
-    Z : 6
-}
 
 GameState = {
     Running : 0,
@@ -52,7 +40,9 @@ var state = GameState.Waiting;
 
 var maxLevel = 99;
 var level = 0;
+var levelP2 = 0;
 var score = 0;
+var scoreP2 = 0;
 var rowScores = [40, 100, 300, 1200];
 
 var monochrome = false;
@@ -112,17 +102,22 @@ for (var i = 0; i < height; i++) {
 
 // A value between 0-7 (see Tetromino enum).
 var curTet, nextTet;
+var curTetP2 = 0, nextTetP2 = 0;
 
 var x, y;
+var xP2 = 0, yP2 = 0;
 
 // Rotation (i.e. "index in tetrominoes array").
 var r;
+var rP2 = 0;
 
 var gameLoop;
 
 function newGame() {
     level = 0;
     score = 0;
+    levelP2 = 0;
+    scoreP2 = 0;
     
     state = GameState.Running;
 
@@ -166,7 +161,8 @@ function newTetromino() {
         return;
     }
 
-    socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
+    socket.emit('gameMessage', {type: MessageType.NewTetrominoMessage, 
+            current: curTet, next: nextTet, rotation: r, xPos: x, yPos: y});
 }
 
 function moveLeft() {
@@ -176,6 +172,7 @@ function moveLeft() {
                 || blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
             return false;
     x--;
+    socket.emit('gameMessage', {type: MessageType.MoveLeftMessage});
     return true;
 }
 
@@ -186,6 +183,7 @@ function moveRight() {
                 || blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
             return false;
     x++;
+    socket.emit('gameMessage', {type: MessageType.MoveRightMessage});
     return true;
 }
 
@@ -200,6 +198,7 @@ function rotate() {
             return false;
     }
     r = newRot;
+    socket.emit('gameMessage', {type: MessageType.RotateMessage, rotation: r});
     return true;
 }
 
@@ -207,14 +206,13 @@ function rotate() {
 function lockCurrent() {
     for (var i = 0; i < 4; i++)
         blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
-
     
     // Emit the locked blocks. Probably horribly inefficient, yeah?
-    socket.emit('lockedBlocks', {blocks: blocks});
+    socket.emit('gameMessage', {type: MessageType.LockBlocksMessage, blocks: blocks});
 }
 
 function checkRowsCompleted() {
-    var n = 0;
+    var n = 0; // number of deleted rows
     for (var i = 0; i < height; i++) {
         var complete = true;
         for (var j = 0; j < width; j++) {
@@ -224,12 +222,12 @@ function checkRowsCompleted() {
             }
         }
         if (complete) {
-            // console.log('removing row #' + i);
-
             // Remove the row and insert a new zero:ed one at the beginning.
             blocks.splice(i, 1);
             blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
             n++;
+
+            socket.emit('gameMessage', {type: MessageType.DeleteRowMessage, row: i});
         }
     }
 
@@ -291,29 +289,43 @@ function checkStartsWithCollision(b) {
 function update() {
     if (state != GameState.Running) return;
     for (var i = 0; i < 4; i++) {
+        // If the block is colliding with the floor or another block:
         if (y + tetros[curTet][r][i][Y] >= height - 1 ||
                 blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
             lockCurrent();
             checkRowsCompleted();
             newTetromino();
-
             return true;
         }
-    }    
+    }
     y++;
-
+    yP2++; // TODO: this should be checked in the same way as P1
     return false;
 }
 
-function clearCanvases() {
-	mainCanvas[P1].width = mainCanvas[P1].width;
-	mainCanvas[P2].width = mainCanvas[P2].width;
-	nextCanvas[P1].width = nextCanvas[P1].width;
-	nextCanvas[P2].width = nextCanvas[P2].width;
+function clearCanvases(player) {
+	mainCanvas[player].width = mainCanvas[player].width;
+	nextCanvas[player].width = nextCanvas[player].width;
+}
+
+function drawTransparentTextBox(player, color, text, xPos) {
+    mainContext[player].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : color;
+    mainContext[player].fillRect(0, 0, mainCanvas[player].width, mainCanvas[player].height);
+    mainContext[player].fillStyle = "white";
+    mainContext[player].font = "bold 30pt Tahoma";
+    mainContext[player].fillText(text, xPos, 240);
+}
+
+function drawScoreAndLevel(player) {
+    mainContext[player].fillStyle = 'black';
+    mainContext[player].font = "bold 10pt Tahoma";
+    mainContext[player].fillText("Score: " + ((player == P1) ? score : scoreP2), 8, 18);
+    mainContext[player].fillText("Level: " + ((player == P1) ? level : levelP2), mainCanvas[player].width-60, 18);
 }
 
 function draw() {
-	clearCanvases();
+	clearCanvases(P1);
+    clearCanvases(P2);
 
 	mainContext[P1].fillStyle = 'black';
     mainContext[P2].fillStyle = 'black';
@@ -335,60 +347,52 @@ function draw() {
     }
 
     switch (state) {
-        case GameState.Running:
-            if (!monochrome) mainContext[P1].fillStyle = colors[curTet];
-            if (!monochrome) nextContext[P1].fillStyle = colors[nextTet];
-            for (var i = 0; i < 4; i++) {
-                // Draw the current moving tetromino.
-                mainContext[P1].fillRect((x+tetros[curTet][r][i][X])*bsize,
-                        (y+tetros[curTet][r][i][Y])*bsize,
-                        bsize, bsize);
-                // Draw the next tetromino.
-                nextContext[P1].fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
-                        3*bsize + tetros[nextTet][0][i][Y]*bsize,
-                        bsize, bsize);
-            }
-            break;
-        case GameState.Waiting:
-            // Waiting for other player to connect.
-            mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 255, 0.3)";
-            mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
-            mainContext[P1].fillStyle = "white";
-            mainContext[P1].font = "bold 30pt Tahoma";
-            mainContext[P1].fillText("WAITING", 60, 240);
-            break;   
-        case GameState.Gameover:
-            // Game over.
-            mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
-            mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
-            mainContext[P1].fillStyle = "white";
-            mainContext[P1].font = "bold 30pt Tahoma";
-            mainContext[P1].fillText("GAME OVER", 30, 240);
-            break;
-        case GameState.Paused:
-            // Game paused
-            mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.3)";
-            mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
-            mainContext[P1].fillStyle = "white";
-            mainContext[P1].font = "bold 30pt Tahoma";
-            mainContext[P1].fillText("PAUSED", 70, 240);    
-            break;
+    case GameState.Running:
+        if (!monochrome) {
+            mainContext[P1].fillStyle = colors[curTet];
+            nextContext[P1].fillStyle = colors[nextTet];
+            mainContext[P2].fillStyle = colors[curTetP2];
+            nextContext[P2].fillStyle = colors[nextTetP2];
+        }
+        for (var i = 0; i < 4; i++) {
+            // Draw the current moving tetromino.
+            mainContext[P1].fillRect((x+tetros[curTet][r][i][X])*bsize,
+                    (y+tetros[curTet][r][i][Y])*bsize,
+                    bsize, bsize);
+            // Draw the next tetromino.
+            nextContext[P1].fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
+                    3*bsize + tetros[nextTet][0][i][Y]*bsize,
+                    bsize, bsize);
 
-        case GameState.Gamewon:
-            // Game won
-            mainContext[P1].fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 255, 0, 0.3)";
-            mainContext[P1].fillRect(0, 0, mainCanvas[P1].width, mainCanvas[P1].height);
-            mainContext[P1].fillStyle = "white";
-            mainContext[P1].font = "bold 30pt Tahoma";
-            mainContext[P1].fillText("YOU WON", 60, 240);    
-            break;
+            // And for P2.
+            mainContext[P2].fillRect((xP2+tetros[curTetP2][rP2][i][X])*bsize,
+                    (yP2+tetros[curTetP2][rP2][i][Y])*bsize,
+                    bsize, bsize);
+            nextContext[P2].fillRect(bsize + tetros[nextTetP2][0][i][X]*bsize,
+                    3*bsize + tetros[nextTetP2][0][i][Y]*bsize,
+                    bsize, bsize);
+        }
+        break;
+    case GameState.Waiting:
+        // Waiting for other player to connect.
+        drawTransparentTextBox(P1, "rgba(255, 0, 255, 0.3)", "WAITING", 60);
+        break;   
+    case GameState.Gameover:
+        // Game over.
+        drawTransparentTextBox(P1, "rgba(255, 0, 0, 0.3)", "GAME OVER", 30);
+        break;
+    case GameState.Paused:
+        // Game paused.
+        drawTransparentTextBox(P1, "rgba(0, 0, 255, 0.3)", "PAUSED", 70);
+        break;
+    case GameState.Gamewon:
+        // Game won.
+        drawTransparentTextBox(P1, "rgba(0, 255, 0, 0.3)", "YOU WON", 58);
+        break;
     }
 
-    // Draw the score and level.
-    mainContext[P1].fillStyle = 'black';
-    mainContext[P1].font = "bold 10pt Tahoma";
-    mainContext[P1].fillText("Score: " + score, 8, 18);
-    mainContext[P1].fillText("Level: " + level, mainCanvas[P1].width-60, 18);
+    drawScoreAndLevel(P1);
+    drawScoreAndLevel(P2);
 }
 
 function run() {
@@ -406,6 +410,7 @@ document.onkeypress = function(e) {
         break;
     case 115: // 's'
         update(); // move down
+        socket.emit('gameMessage', {type: MessageType.MoveDownMessage});
         break;
     case 119: // 'w'
         rotate();
@@ -426,4 +431,3 @@ document.onkeypress = function(e) {
     }
     draw();
 }
-

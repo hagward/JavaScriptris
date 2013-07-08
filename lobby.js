@@ -1,4 +1,4 @@
-// Add text to the TextArea
+// Add text to the TextArea.
 function addMessage(message, sender) {
 	var textarea = document.getElementById('messageArea'); 
 	var text = textarea.innerHTML;
@@ -10,7 +10,7 @@ function addMessage(message, sender) {
 
 // Emit a chat message.
 function sendChatMessage(message) {
- 	socket.emit('lobbyMessage',{type: MessageType.ChatMessage, message: message});
+ 	socket.emit('lobbyMessage', {type: MessageType.ChatMessage, message: message});
 }
 
 // Send a message to the other player.
@@ -35,9 +35,9 @@ function sendReady() {
  	addMessage('You are ready!','System');
  	ready = true;
 
- 	if (strangerready) {
- 		socket.emit('lobbyMessage',{type: MessageType.StartMessage, id: userid});
+ 	if (strangerReady) {
+ 		socket.emit('lobbyMessage', {type: MessageType.StartMessage, id: userid});
  	} else {
- 		socket.emit('lobbyMessage',{type: MessageType.ReadyMessage, id: userid});
+ 		socket.emit('lobbyMessage', {type: MessageType.ReadyMessage, id: userid});
  	}
 }

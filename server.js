@@ -1,8 +1,4 @@
-// TODO: when two clients are paired, send some instruction to make them both
-//       run newGame(), and retrieve information about their starting blocks
-// TODO: forward keypress and block information between the two clients
-
-var port = 80;
+var port = 7845;
 
 var app = require('express')(),
     server = require('http').createServer(app),
@@ -14,7 +10,14 @@ MessageType = {
     ChatMessage : 0,
     ReadyMessage : 1,
     StartMessage : 2,
-    GameoverMessage : 3
+    GameoverMessage : 3,
+    NewTetrominoMessage : 4,
+    MoveLeftMessage : 5,
+    MoveRightMessage : 6,
+    RotateMessage : 7,
+    LoadBlocksMessage : 8,
+    DeleteRowMessage : 9,
+    MoveDownMessage : 10
 }
 
 //  Start express server.
@@ -95,35 +98,28 @@ io.sockets.on('connection', function (client) {
         findPlayerAndConnect(client);
     });
 
-    // On client spawns a new tetromino and wants to reveal information about
-    // it to the client's partner in crime.
-    client.on('newTetromino', function (data) {
+    client.on('gameMessage', function (data) {
         if (client.connectedTo != null)
-            client.connectedTo.emit('newTetromino', data);
-    });
-
-    client.on('lockedBlocks', function (data) {
-        if (client.connectedTo != null)
-            client.connectedTo.emit('lockedBlocks', data);
+            client.connectedTo.emit('gameMessage', data);
     });
 
     // On client recieves lobbymessages.
     client.on('lobbyMessage', function (data) {
         switch(data.type) {
-            case MessageType.ChatMessage:
-            case MessageType.ReadyMessage:
-            case MessageType.GameoverMessage:
-                // Resend to connected client.
-                if (client.connectedTo != null)
-                    client.connectedTo.emit('lobbyMessage', data);
-                break;
-            case MessageType.StartMessage:
-                // Send to both...
-                if (client.connectedTo != null) {
-                    client.connectedTo.emit('lobbyMessage', data);
-                    client.emit('lobbyMessage',data);
-                }
-                break;    
+        case MessageType.ChatMessage:
+        case MessageType.ReadyMessage:
+        case MessageType.GameoverMessage:
+            // Resend to connected client.
+            if (client.connectedTo != null)
+                client.connectedTo.emit('lobbyMessage', data);
+            break;
+        case MessageType.StartMessage:
+            // Send to both...
+            if (client.connectedTo != null) {
+                client.connectedTo.emit('lobbyMessage', data);
+                client.emit('lobbyMessage', data);
+            }
+            break;
         }
     });
 });
