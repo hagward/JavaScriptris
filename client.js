@@ -5,6 +5,12 @@ var userid = '';
 var ready = false;
 var strangerReady = false;
 
+var maxPauses = 2;
+var curPauses = 0;
+
+var wins = 0;
+var strangerWins = 0;
+
 MessageType = {
     ChatMessage : 0,
     ReadyMessage : 1,
@@ -18,25 +24,52 @@ MessageType = {
     LockBlocksMessage : 9,
     DeleteRowMessage : 10,
     ScoreMessage : 11,
-    LevelMessage : 12
+    LevelMessage : 12,
+    PauseMessage : 13
 }
 
 // Emit gameover message and reset ready.
 function emitGameover() {
     addMessage('STRANGER WON!','System');
+
+    // Reset variables.
     ready = false;
     strangerReady = false;
+
+    // Increase stranger wins and reset pauses.
+    curPauses = 0;
+    document.getElementById("pauseCount").innerHTML = 'p = pause (' + maxPauses + ' left)';
+
+    strangerWins++;
+    document.getElementById("scoreCount").innerHTML = wins + ' - ' + strangerWins;
+
     socket.emit('lobbyMessage', {type: MessageType.GameoverMessage, id: userid});
+}
+
+function emitPauseToggle() {
+    if (state == GameState.Running) {
+        if (curPauses < maxPauses) {
+            socket.emit('lobbyMessage', {type: MessageType.PauseMessage, action: 'pause', id: userid});
+
+            // Increase local pauses.
+            curPauses++;
+            document.getElementById("pauseCount").innerHTML = 'p = pause (' + (maxPauses - curPauses) + ' left)';
+        }
+    } else if (state == GameState.Paused) {
+        socket.emit('lobbyMessage', {type: MessageType.PauseMessage, action: 'unpause', id: userid})
+    }
 }
 
 socket.on('connected', function (data) {
     document.getElementById("playerID").innerHTML = "My ID: <b>" + data.id + "</b>";
+    userid = data.id;
+
     addMessage('You are connected to the server!','System');
 
     // Draw the waiting screen!
     draw();
 
-    // disable lobby buttons
+    // Disable lobby buttons.
     document.getElementById('sendButton').disabled = true; 
     document.getElementById('readyButton').disabled = true; 
 });
@@ -49,9 +82,7 @@ socket.on('foundPlayer', function (data) {
     document.getElementById("connectedToPlayer").innerHTML = "Connected to player " + data.id;
     addMessage('Found another player!','System');
 
-    userid = data.id;
-
-    //enable lobby buttons
+    // Enable lobby buttons.
     document.getElementById('sendButton').disabled = false; 
     document.getElementById('readyButton').disabled = false; 
 });
@@ -62,28 +93,41 @@ socket.on('playerDisconnect', function (data) {
 
     addMessage('Other player disconnected!','System');
 
-    // Wait and reset the ready states.
+    // Wait and reset variables.
     state = GameState.Waiting;
     ready = false;
     strangerReady = false;
+    curPauses = 0;
+    wins = 0;
+    strangerWins = 0;
 
     // Clear stuff.
     newGame();
 
-    // And disable lobby buttons.
+    // Disable lobby buttons and set texts.
     document.getElementById('sendButton').disabled = true; 
     document.getElementById('readyButton').disabled = true; 
+
+    document.getElementById("scoreCount").innerHTML = '0 - 0';
+    document.getElementById("pauseCount").innerHTML = 'p = pause (' + maxPauses + ' left)';
 });
 
 // On recieving lobbyMessages
 socket.on('lobbyMessage', function (data) {
     switch (data.type) {
     case MessageType.ChatMessage:
-        // Recieved chatmessage from other player, add it to the TextArea
+        // Recieved chatmessage from other player, add it to the TextArea.
         addMessage(data.message,'Stranger');
         break;
     case MessageType.GameoverMessage:
         addMessage('YOU WON!','System');
+
+        // Increase wins and reset pauses.
+        wins++;
+        document.getElementById("scoreCount").innerHTML = wins + ' - ' + strangerWins;
+
+        curPauses = 0;
+        document.getElementById("pauseCount").innerHTML = 'p = pause (' + maxPauses + ' left)';
 
         state = GameState.Gamewon;
 
@@ -106,6 +150,32 @@ socket.on('lobbyMessage', function (data) {
         if (ready)
             socket.emit('lobbyMessage',{type: MessageType.StartMessage, id: userid});
         break;
+    case MessageType.PauseMessage:
+        // Set or clear update intervals, set states and add a system message. 
+        if (data.action == 'pause') {
+            clearInterval(gameLoop);
+            clearInterval(gameLoopP2);
+
+            state = GameState.Paused;
+
+            if (data.id != userid)
+                addMessage('Stranger paused the game!','System');
+            else
+                addMessage('You paused the game!','System');
+        } else if (data.action == 'unpause') {
+            gameLoop = setInterval(run, updateInterval);
+            gameLoopP2 = setInterval(updateP2, updateIntervalP2);
+
+            state = GameState.Running;
+
+            if (data.id != userid)
+                addMessage('Stranger unpaused the game!','System');
+            else
+                addMessage('You unpaused the game!','System');
+        }
+
+        // Draw new screen.
+        draw();
     }
 });
 

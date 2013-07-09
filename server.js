@@ -19,7 +19,8 @@ MessageType = {
     LockBlocksMessage : 9,
     DeleteRowMessage : 10,
     ScoreMessage : 11,
-    LevelMessage : 12
+    LevelMessage : 12,
+    PauseMessage : 13
 }
 
 //  Start express server.
@@ -115,6 +116,7 @@ io.sockets.on('connection', function (client) {
             if (client.connectedTo != null)
                 client.connectedTo.emit('lobbyMessage', data);
             break;
+        case MessageType.PauseMessage:
         case MessageType.StartMessage:
             // Send to both...
             if (client.connectedTo != null) {

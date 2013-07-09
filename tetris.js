@@ -264,19 +264,6 @@ function instaDrop() {
     while (!update());
 }
 
-function togglePaused() {
-    // The game must be running or be paused to be able to toggle.
-    if (state == GameState.Running || state == GameState.Paused) {
-        if (state == GameState.Paused) {
-            gameLoop = setInterval(run, updateInterval);
-            state = GameState.Running;
-        } else {
-            clearInterval(gameLoop);
-            state = GameState.Paused;
-        }
-    }
-}
-
 // Checks if the newly spawned tetromino collides with previous ones.
 function checkStartsWithCollision(b) {
     for (var i = 0; i < 4; i++)
@@ -380,18 +367,22 @@ function draw() {
     case GameState.Waiting:
         // Waiting for other player to connect.
         drawTransparentTextBox(P1, "rgba(255, 0, 255, 0.3)", "WAITING", 55);
+        drawTransparentTextBox(P2, "rgba(255, 0, 255, 0.1)", "", 55);
         break;   
     case GameState.Gameover:
         // Game over.
         drawTransparentTextBox(P1, "rgba(255, 0, 0, 0.3)", "YOU LOSE", 50);
+        drawTransparentTextBox(P2, "rgba(0, 255, 0, 0.3)", "", 50);
         break;
     case GameState.Paused:
         // Game paused.
         drawTransparentTextBox(P1, "rgba(0, 0, 255, 0.3)", "PAUSED", 70);
+        drawTransparentTextBox(P2, "rgba(0, 0, 255, 0.3)", "", 70);
         break;
     case GameState.Gamewon:
         // Game won.
         drawTransparentTextBox(P1, "rgba(0, 255, 0, 0.3)", "YOU WIN", 50);
+        drawTransparentTextBox(P2, "rgba(255, 0, 0, 0.3)", "", 50);
         break;
     }
 
@@ -422,10 +413,10 @@ document.onkeypress = function(e) {
     case 32: // space
         instaDrop();
         break;
-    /*case 112: // 'p'
-        togglePaused();
+    case 112: // 'p'
+        emitPauseToggle();
         break;
-    case 114: // 'r'
+    /*case 114: // 'r'
         if (state = GameState.Running)
             newGame();
         break;*/

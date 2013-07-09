@@ -31,6 +31,12 @@
                 width: 500px;
                 resize: none;
             }
+            #scoreCount {
+                font: 26pt Tahoma;
+                font-weight: bold;
+                text-align: center; 
+                color: grey;
+            }
             .canvas_main {
             	float: left;
                 border: 1px dotted grey;
@@ -55,10 +61,12 @@
             <div style="clear: both"></div>
         </div>
 
+        <div id="scoreCount">0 - 0</div>   
+
         <div id="footer">
             Controls: wasd + space<br>
-            m = mono-/multicolor<br>
-            p = pause<br>
+            m = mono-/multicolor
+            <div id="pauseCount">p = pause (2 left)</div><br>
             <div id="playerCount">Number of connected players: </div><br>
             <div id="playerID">Not assigned id.</div>
             <div id="connectedToPlayer">Not connected to a player.</div>
