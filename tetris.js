@@ -19,8 +19,7 @@
  */
 
 var updateInterval = 1000;
-
-var multiplayer = false;
+var updateIntervalP2 = 1000;
 
 // Constants for x and y indices in the block lists, and for players.
 var X = 0;
@@ -111,15 +110,13 @@ var xP2 = 0, yP2 = 0;
 var r;
 var rP2 = 0;
 
-var gameLoop;
+var gameLoop, gameLoopP2;
 
 function newGame() {
     level = 0;
     score = 0;
     levelP2 = 0;
     scoreP2 = 0;
-    
-    state = GameState.Running;
 
     // Clear the block arrays.
     for (var i = 0; i < height; i++) {
@@ -133,7 +130,9 @@ function newGame() {
     newTetromino();
 
     clearInterval(gameLoop);
+    clearInterval(gameLoopP2);
     gameLoop = setInterval(run, updateInterval);
+    gameLoopP2 = setInterval(updateP2, updateIntervalP2);
 
     // Need to draw before first update for the first tetromino to appear at the
     // very top.
@@ -245,8 +244,10 @@ function checkRowsCompleted() {
                 updateInterval = newInterval;
                 clearInterval(gameLoop);
                 gameLoop = setInterval(run, updateInterval);
+                socket.emit('gameMessage', {type: MessageType.LevelMessage, level: level, interval: updateInterval});
             }
         }
+        socket.emit('gameMessage', {type: MessageType.ScoreMessage, score: score});
     }
 }
 
@@ -299,8 +300,11 @@ function update() {
         }
     }
     y++;
-    yP2++; // TODO: this should be checked in the same way as P1
     return false;
+}
+
+function updateP2() {
+    yP2++;
 }
 
 function clearCanvases(player) {
@@ -375,11 +379,11 @@ function draw() {
         break;
     case GameState.Waiting:
         // Waiting for other player to connect.
-        drawTransparentTextBox(P1, "rgba(255, 0, 255, 0.3)", "WAITING", 60);
+        drawTransparentTextBox(P1, "rgba(255, 0, 255, 0.3)", "WAITING", 55);
         break;   
     case GameState.Gameover:
         // Game over.
-        drawTransparentTextBox(P1, "rgba(255, 0, 0, 0.3)", "GAME OVER", 30);
+        drawTransparentTextBox(P1, "rgba(255, 0, 0, 0.3)", "YOU LOSE", 50);
         break;
     case GameState.Paused:
         // Game paused.
@@ -387,7 +391,7 @@ function draw() {
         break;
     case GameState.Gamewon:
         // Game won.
-        drawTransparentTextBox(P1, "rgba(0, 255, 0, 0.3)", "YOU WON", 58);
+        drawTransparentTextBox(P1, "rgba(0, 255, 0, 0.3)", "YOU WIN", 50);
         break;
     }
 
@@ -418,13 +422,13 @@ document.onkeypress = function(e) {
     case 32: // space
         instaDrop();
         break;
-    case 112: // 'p'
+    /*case 112: // 'p'
         togglePaused();
         break;
     case 114: // 'r'
         if (state = GameState.Running)
             newGame();
-        break;
+        break;*/
     case 109: // 'm'
         monochrome = !monochrome;
         break;

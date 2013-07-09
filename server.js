@@ -14,10 +14,12 @@ MessageType = {
     NewTetrominoMessage : 4,
     MoveLeftMessage : 5,
     MoveRightMessage : 6,
-    RotateMessage : 7,
-    LoadBlocksMessage : 8,
-    DeleteRowMessage : 9,
-    MoveDownMessage : 10
+    MoveDownMessage : 7,
+    RotateMessage : 8,
+    LockBlocksMessage : 9,
+    DeleteRowMessage : 10,
+    ScoreMessage : 11,
+    LevelMessage : 12
 }
 
 //  Start express server.

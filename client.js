@@ -13,10 +13,12 @@ MessageType = {
     NewTetrominoMessage : 4,
     MoveLeftMessage : 5,
     MoveRightMessage : 6,
-    RotateMessage : 7,
-    LockBlocksMessage : 8,
-    DeleteRowMessage : 9,
-    MoveDownMessage : 10
+    MoveDownMessage : 7,
+    RotateMessage : 8,
+    LockBlocksMessage : 9,
+    DeleteRowMessage : 10,
+    ScoreMessage : 11,
+    LevelMessage : 12
 }
 
 // Emit gameover message and reset ready.
@@ -60,15 +62,13 @@ socket.on('playerDisconnect', function (data) {
 
     addMessage('Other player disconnected!','System');
 
-    // Clear stuff.
-    newGame();
-
-    // And wait...
+    // Wait and reset the ready states.
     state = GameState.Waiting;
-
-    // Reset ready...
     ready = false;
     strangerReady = false;
+
+    // Clear stuff.
+    newGame();
 
     // And disable lobby buttons.
     document.getElementById('sendButton').disabled = true; 
@@ -111,7 +111,6 @@ socket.on('lobbyMessage', function (data) {
 
 // TODO: The values received from Player 2 should probably checked in some way.
 socket.on('gameMessage', function (data) {
-    console.log('RECEIVED gameMessage: ' + data.type);
     switch (data.type) {
     // The other player spawned a new tetromino:
     case MessageType.NewTetrominoMessage:
@@ -127,6 +126,9 @@ socket.on('gameMessage', function (data) {
     case MessageType.MoveRightMessage:
         xP2++;
         break;
+    case MessageType.MoveDownMessage:
+        yP2++;
+        break;
     case MessageType.RotateMessage:
         rP2 = data.rotation;
         break;
@@ -137,8 +139,16 @@ socket.on('gameMessage', function (data) {
         blocksP2.splice(data.row, 1);
         blocksP2.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
         break;
-    case MessageType.MoveDownMessage:
-        yP2++;
+    case MessageType.ScoreMessage:
+        scoreP2 = data.score;
+        break;
+    case MessageType.LevelMessage:
+        levelP2 = data.level;
+        if (updateIntervalP2 != data.interval) {
+            clearInterval(gameLoopP2);
+            gameLoopP2 = setInterval(updateP2, data.interval);
+            updateIntervalP2 = data.interval;
+        }
         break;
     }
     draw();
