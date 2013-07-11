@@ -5,6 +5,18 @@
         <title>JavaScriptris</title>
         <link rel="shortcut icon" href="./favicon.ico">
         <style>
+            button {
+                margin: 0;
+                padding: 0;
+            }
+            textarea {
+                width: 100%;
+            }
+            input {
+                width: 85%;
+                margin-bottom: 4px;
+                float: right;
+            }
             #header {
                 font: 13pt Tahoma;
                 text-align: center;
@@ -15,6 +27,7 @@
                 color: grey;
                 text-align: center;
                 margin-top: 4px;
+                margin-bottom: 4px;
             }
             #content {
                 width: 844px;
@@ -22,13 +35,14 @@
                 padding: 20px;
             }
             #lobby {
-                width: 500px;
+                width: 28%;
                 display: block;
                 margin-left: auto;
                 margin-right: auto;
             }
             #messageArea {
-                width: 500px;
+                width: 99%;
+                margin-bottom: 4px;
                 resize: none;
             }
             #scoreCount {
@@ -36,6 +50,13 @@
                 font-weight: bold;
                 text-align: center; 
                 color: grey;
+            }
+            #messageText {
+                float: left;
+            }
+            #buttonContainer {
+                width: 100%;
+                text-align: right;
             }
             .canvas_main {
             	float: left;
@@ -65,7 +86,8 @@
 
         <div id="footer">
             Controls: wasd + space<br>
-            m = mono-/multicolor
+            m = mono-/multicolor<br>
+            § = focus/unfocus chat
             <div id="pauseCount">p = pause (2 left)</div><br>
             <div id="playerCount">Number of connected players: </div><br>
             <div id="playerID">Not assigned id.</div>
@@ -73,14 +95,16 @@
         </div>
 
         <div id="lobby">
-            <textarea id="messageArea" readonly rows="5">
-                --JavaScriptris Multiplayer--</textarea>
+            <textarea id="messageArea" readonly rows="5">--JavaScriptris Multiplayer--</textarea>
 
-            Message: <input type="text" id="message" value="" 
-            onkeypress="keyPress(event);"><br>
+            <div id="messageText">Message:</div>
+            <input type="text" id="message" value="" onkeypress="keyPress(event);">
+            <div style="clear: both"></div>
 
-            <button id="sendButton" type="button" onclick="sendMessage()">Send</button>
-            <button id="readyButton" type="button" onclick="sendReady()">I'm ready!</button>
+            <div id="buttonContainer">
+                <button id="sendButton" type="button" onclick="sendMessage();">Send</button>
+                <button id="readyButton" type="button" onclick="sendReady();">I'm ready!</button>
+            </div>
         </div>
 
         <script src="/socket.io/socket.io.js"></script>

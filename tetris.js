@@ -59,7 +59,7 @@ var tetros = [
             [[0,0],[0,-1],[0,1],[-1,-1]], [[0,0],[-1,0],[1,0],[1,-1]]],
     [[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]], // S
     [[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]] // Z
-]
+];
 var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
 
 var mainCanvas = [
@@ -395,7 +395,21 @@ function run() {
     draw();
 }
 
+var message = document.getElementById('message');
 document.onkeypress = function(e) {
+    // Make sure that the keystrokes aren't handled if the user is writing a
+    // a message.
+    var curElement = document.activeElement;
+    if (e.which == 167) {
+        e.preventDefault();
+        if (curElement == message)
+            message.blur();
+        else
+            message.focus();
+        return;
+    } else if (curElement == message)
+        return;
+
     switch (e.which) {
     case 97: // 'a'
         moveLeft();
@@ -416,10 +430,6 @@ document.onkeypress = function(e) {
     case 112: // 'p'
         emitPauseToggle();
         break;
-    /*case 114: // 'r'
-        if (state = GameState.Running)
-            newGame();
-        break;*/
     case 109: // 'm'
         monochrome = !monochrome;
         break;
