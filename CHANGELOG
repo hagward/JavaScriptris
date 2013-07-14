@@ -1,3 +1,10 @@
+v0.2.2, 2013-07-14
+----------------
+  * Fixed an error (validation error) in game.html.
+  * Adjusted the canvas position.
+  * Removed the Tetromino enum.
+  * Updated the readme.
+
 v0.2.1, 2013-06-27
 ----------------
   * Now being able to restart the game without refreshing the page.

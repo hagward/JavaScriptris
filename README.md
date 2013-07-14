@@ -14,18 +14,17 @@ system is from the original Tetris but the level system is completely improvised
 
 Feel free to [try it out](https://dl.dropboxusercontent.com/u/334931/game.html).
 
-On one beautiful evening in June, GitHub user rattmuffen joined the team to
-try to bring multiplayer functionality into the picture.
-
 ## Contribution
 
-You are more than welcome to help out in the 'multiplayer' branch where a 1v1
-multiplayer mode is being built by the means of [node.js](http://nodejs.org/)
-and [socket.io](http://socket.io/).
+You are more than welcome to help out if you want to. Simply fork the project, make
+some cool improvements (possibly creating a new branch first) and issue a pull request.
+For example is multiplayer functionality currently being developed (see the 'multiplayer'
+branch) by the means of [node.js](http://nodejs.org/) and [socket.io](http://socket.io/),
+so feel free to experiment with ideas!
 
 ## License
 
-The MIT License:
+JavaScriptris is licensed under the MIT license:
 
 	Copyright (C) 2013 Anders Hagward
 

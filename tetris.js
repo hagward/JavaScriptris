@@ -1,6 +1,6 @@
 ﻿/**
- * JavaScriptris v0.2.1 by Anders Hagward
- * Date: 2013-06-27
+ * JavaScriptris v0.2.2 by Anders Hagward
+ * Date: 2013-07-14
  *
  * The challenge was: how long time will it take to write a Tetris clone
  * stranded on a desolate island with only a laptop and an old smartphone,
@@ -18,10 +18,6 @@
  * Enjoy this fun little project!
  */
 
- // todo: make block size relative to the canvas size
- // todo: wall kicks
- // todo: restart game
-
 var updateInterval = 1000;
 
 // Constants for x and y indices in the block lists.
@@ -38,33 +34,23 @@ var monochrome = false;
 // Contains all 19 fixed tetrominoes. The first element in all lists is the
 // pivot element that the other blocks rotate around.
 var tetros = [
-	[[[0,0],[0,-1],[0,1],[0,2]], [[0,0],[-1,0],[1,0],[2,0]]], // I
-	[[[0,0],[1,0],[0,-1],[1,-1]]], // O
-	[[[0,0],[0,-1],[0,1],[1,0]], [[0,0],[-1,0],[1,0],[0,1]], // T
+	[[[0,0],[0,-1],[0,1],[0,2]], [[0,0],[-1,0],[1,0],[2,0]]],			// I
+	[[[0,0],[1,0],[0,-1],[1,-1]]],										// O
+	[[[0,0],[0,-1],[0,1],[1,0]], [[0,0],[-1,0],[1,0],[0,1]],			// T
 			[[0,0],[0,-1],[0,1],[-1,0]], [[0,0],[-1,0],[1,0],[0,-1]]],
-	[[[0,0],[0,-1],[0,1],[1,-1]], [[0,0],[-1,0],[1,0],[1,1]], // J
+	[[[0,0],[0,-1],[0,1],[1,-1]], [[0,0],[-1,0],[1,0],[1,1]],			// J
 			[[0,0],[0,-1],[0,1],[-1,1]], [[0,0],[-1,0],[1,0],[-1,-1]]],
-	[[[0,0],[0,-1],[0,1],[1,1]], [[0,0],[-1,0],[1,0],[-1,1]], // L
+	[[[0,0],[0,-1],[0,1],[1,1]], [[0,0],[-1,0],[1,0],[-1,1]],			// L
 			[[0,0],[0,-1],[0,1],[-1,-1]], [[0,0],[-1,0],[1,0],[1,-1]]],
-	[[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]], // S
-	[[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]] // Z
-]
+	[[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]],			// S
+	[[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]]			// Z
+];
+
+var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
 
 // Determines whether to show the moving tetromino or not.
 var running = true;
 var paused = false;
-
-Tetromino = {
-	I : 0,
-	O : 1,
-	T : 2,
-	J : 3,
-	L : 4,
-	S : 5,
-	Z : 6
-}
-
-var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
 
 var c1 = document.getElementById('maincanvas');
 var c2 = document.getElementById('nexttetrocanvas');
@@ -183,6 +169,8 @@ function lockCurrent() {
 		blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
 }
 
+// Checks for completed rows, deletes them and updates the score and level
+// respectively. Should probably be broken up into smaller functions.
 function checkRowsCompleted() {
 	var n = 0;
 	for (var i = 0; i < height; i++) {
@@ -194,8 +182,6 @@ function checkRowsCompleted() {
 			}
 		}
 		if (complete) {
-			// console.log('removing row #' + i);
-			
 			// Remove the row and insert a new zero:ed one at the beginning.
 			blocks.splice(i, 1);
 			blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
@@ -210,12 +196,10 @@ function checkRowsCompleted() {
 		// Home-crafted formula for levelling up...
 		var newLevel = Math.floor(score/(200*(level+1)));
 		if (newLevel > level) {
-			// console.log('new level: ' + level + ' -> ' + newLevel);
 			level = (newLevel < maxLevel) ? newLevel : maxLevel;
 			
 			var newInterval = updateInterval - 30 * level;
 			if (newInterval > 0) {
-				// console.log('new update interval: ' + updateInterval + ' -> ' + newInterval);
 				updateInterval = newInterval;
 				clearInterval(gameLoop);
 				gameLoop = setInterval(run, updateInterval);
@@ -225,7 +209,6 @@ function checkRowsCompleted() {
 }
 
 function gameOver() {
-	// console.log('game over');
 	clearInterval(gameLoop);
 	running = false;
 }
@@ -254,7 +237,6 @@ function update() {
 	for (var i = 0; i < 4; i++) {
 		if (y + tetros[curTet][r][i][Y] >= height - 1 ||
 				blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
-			// console.log('tetromino has landed!');
 			lockCurrent();
 			checkRowsCompleted();
 			newTetromino();
@@ -266,7 +248,8 @@ function update() {
 }
 
 function draw() {
-	c1.width = c1.width; // clear canvas
+	// Clear the canvases.
+	c1.width = c1.width;
 	c2.width = c2.width;
 	
 	if (monochrome) ctx1.fillStyle = 'black';
