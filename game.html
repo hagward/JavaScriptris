@@ -4,70 +4,7 @@
         <meta charset="UTF-8">
         <title>JavaScriptris</title>
         <link rel="shortcut icon" href="./favicon.ico">
-        <style>
-            button {
-                margin: 0;
-                padding: 0;
-            }
-            textarea {
-                width: 100%;
-            }
-            input {
-                width: 85%;
-                margin-bottom: 4px;
-                float: right;
-            }
-            #header {
-                font: 13pt Tahoma;
-                text-align: center;
-                margin-bottom: 4px;
-            }
-            #footer {
-                font: 8pt Tahoma;
-                color: grey;
-                text-align: center;
-                margin-top: 4px;
-                margin-bottom: 4px;
-            }
-            #content {
-                width: 844px;
-                margin: 0 auto;
-                padding: 20px;
-            }
-            #lobby {
-                width: 28%;
-                display: block;
-                margin-left: auto;
-                margin-right: auto;
-            }
-            #messageArea {
-                width: 99%;
-                margin-bottom: 4px;
-                resize: none;
-            }
-            #scoreCount {
-                font: 26pt Tahoma;
-                font-weight: bold;
-                text-align: center; 
-                color: grey;
-            }
-            #messageText {
-                float: left;
-            }
-            #buttonContainer {
-                width: 100%;
-                text-align: right;
-            }
-            .canvas_main {
-            	float: left;
-                border: 1px dotted grey;
-                width: 300px;
-            }
-            .canvas_next {
-            	float: left;
-            	width: 120px;
-            }
-        </style>
+        <link rel="stylesheet" type="text/css" href="style.css">
     </head>
     <body>
         <div id="header">JavaScriptris Multiplayer v0.0.1</div>
@@ -82,6 +19,9 @@
             <div style="clear: both"></div>
         </div>
 
+        <canvas id="battleMeter" class="canvas_meter" width="600" height="40"></canvas> 
+
+        <div id="timeCount"></div>
         <div id="scoreCount">0 - 0</div>   
 
         <div id="footer">
@@ -102,8 +42,14 @@
             <div style="clear: both"></div>
 
             <div id="buttonContainer">
-                <button id="sendButton" type="button" onclick="sendMessage();">Send</button>
+                <select id="modeSelection">
+                    <option>--Select a game mode!--</option>
+                    <option>Endless</option>
+                    <option>Time attack</option>
+                    <option>Battle</option>
+                </select>
                 <button id="readyButton" type="button" onclick="sendReady();">I'm ready!</button>
+                <button id="sendButton" type="button" onclick="sendMessage();">Send</button>
             </div>
         </div>
 

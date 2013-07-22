@@ -1,0 +1,73 @@
+button {
+    margin: 0;
+    padding: 0;
+}          
+textarea {
+    width: 100%;
+}
+input {
+    width: 85%;
+    margin-bottom: 4px;
+    float: right;
+}
+#header {
+    font: 13pt Tahoma;
+    text-align: center;
+    margin-bottom: 4px;
+}
+#footer {
+    font: 8pt Tahoma;
+    color: grey;
+    text-align: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+#content {
+    width: 844px;
+    margin: 0 auto;
+    padding: 20px;
+}
+#lobby {
+    width: 30%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+#messageArea {
+    width: 99%;
+    margin-bottom: 4px;
+    resize: none;
+}
+#scoreCount {
+    font: 26pt Tahoma;
+    font-weight: bold;
+    text-align: center; 
+    color: grey;
+}
+#timeCount {
+    font: 34pt Tahoma;
+    font-weight: bold;
+    text-align: center; 
+    color: grey;
+}
+#messageText {
+    float: left;
+}
+#buttonContainer {
+    width: 100%;
+    text-align: right;
+}
+.canvas_main {
+    float: left;
+    border: 1px dotted grey;
+    width: 300px;
+}
+.canvas_next {
+    float: left;
+    width: 120px;
+}
+.canvas_meter {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}

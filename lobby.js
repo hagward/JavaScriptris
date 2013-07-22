@@ -4,7 +4,7 @@ function addMessage(message, sender) {
 	var text = textarea.innerHTML;
 	textarea.innerHTML = text + '\n'+ sender + ': ' + message; 
 
-	// Scroll to top.
+	// Scroll to bottom.
 	textarea.scrollTop = textarea.scrollHeight - textarea.clientHeight;
 }
 
@@ -30,14 +30,31 @@ function keyPress(e) {
 		document.getElementById('sendButton').click();
 }
 
-// If stranger is ready send a start message, otherwise send a ready message.
-function sendReady() {
- 	addMessage('You are ready!','System');
- 	ready = true;
+// Get index of selected item of the modeSelection dropdown box.
+function getSelectedGameType() {
+ 	var dropdown = document.getElementById("modeSelection");
+	return dropdown.selectedIndex;
+}
 
- 	if (strangerReady) {
- 		socket.emit('lobbyMessage', {type: MessageType.StartMessage, id: userid});
- 	} else {
- 		socket.emit('lobbyMessage', {type: MessageType.ReadyMessage, id: userid});
- 	}
+// Get name of GameType.
+function getGameTypeString(gt) {
+	var dropdown = document.getElementById("modeSelection");
+	return dropdown.options[gt].text;
+}
+
+// If stranger is ready and has same GameType; send a start message, otherwise send a ready message.
+function sendReady() {
+	if (getSelectedGameType() == GameType.None) {
+		addMessage('Please select a game mode!','System');
+	} else {
+	 	addMessage('You are ready for a ' + getGameTypeString(getSelectedGameType()) + ' game!','System');
+	 	readyType = getSelectedGameType();
+
+		// Send Start- or ReadyMessage.
+	 	if (readyType == strangerReadyType) {
+	 		socket.emit('lobbyMessage', {type: MessageType.StartMessage, id: userid, gameType: readyType});
+	 	} else {
+	 		socket.emit('lobbyMessage', {type: MessageType.ReadyMessage, id: userid, gameType: readyType});
+	 	}
+	}
 }

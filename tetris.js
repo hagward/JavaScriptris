@@ -18,6 +18,8 @@
  * Enjoy this fun little project!
  */
 
+var startingUpdateInterval = 1000;
+
 var updateInterval = 1000;
 var updateIntervalP2 = 1000;
 
@@ -226,6 +228,9 @@ function checkRowsCompleted() {
             blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
             n++;
 
+            // Cleared own line!
+            addClearedLines(true);
+
             socket.emit('gameMessage', {type: MessageType.DeleteRowMessage, row: i});
         }
     }
@@ -287,6 +292,9 @@ function update() {
         }
     }
     y++;
+    
+    // Check rules depending on game type.
+    checkGameTypeRules();
     return false;
 }
 

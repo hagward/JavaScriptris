@@ -20,7 +20,8 @@ MessageType = {
     DeleteRowMessage : 10,
     ScoreMessage : 11,
     LevelMessage : 12,
-    PauseMessage : 13
+    PauseMessage : 13,
+    BattleMessage : 14
 }
 
 //  Start express server.
