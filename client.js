@@ -67,6 +67,9 @@ function emitGameover() {
     document.getElementById('timeCount').innerHTML = '';
     clearInterval(timer);
 
+    // Re-enable ready button.
+    document.getElementById('readyButton').disabled = false; 
+
     // Reset update intervals to start value.
     updateInterval = startingUpdateInterval;
     updateIntervalP2 = startingUpdateInterval;
@@ -89,9 +92,6 @@ function emitPauseToggle() {
 }
 
 function checkGameTypeRules() {
-    // Set the battle meter to hidden, just in case it was visible.
-    document.getElementById('battleMeter').style.display = 'none';
-
 	switch (readyType) {
 		case GameType.Endless:
 			// No special rules...
@@ -121,6 +121,9 @@ function checkGameTypeRules() {
 				    curPauses = 0;
 				    curTime = 0;
 
+                    // Re-enable ready button.
+                    document.getElementById('readyButton').disabled = false; 
+
 				    document.getElementById('pauseCount').innerHTML = 'p = pause (' + maxPauses + ' left)';
 					document.getElementById('timeCount').innerHTML = '';
 				}
@@ -138,30 +141,32 @@ function checkGameTypeRules() {
 				emitGameover();
 			}
 
-			drawBattleMeter();
 			break;
 	}
 }
 
-function addClearedLines(ownLines) {
+function addClearedLines(ownLines,lines) {
 	if (ownLines) {
-		clearedLines++;
+		clearedLines+=lines;
 
 		// If meters meet from own cleared line, then reduce stranger's meter.
 		if (clearedLines + strangerClearedLines > maxClearedLines) {
-			strangerClearedLines--;
+			strangerClearedLines-=lines;
 
 			// Emit new cleared line number to stranger.
 			socket.emit('gameMessage',{type: MessageType.BattleMessage, id: userid, lines:strangerClearedLines});
 		}
 	} else {
-		strangerClearedLines++;
+		strangerClearedLines+=lines;
 
 		// If meters meet from stranger cleared line, then reduce own meter.
 		if (clearedLines + strangerClearedLines > maxClearedLines) {
-			clearedLines--;
+			clearedLines-=lines;
 		}
 	}
+
+    // Updated values => draw new battle meter.
+    drawBattleMeter();     
 }
 
 function drawBattleMeter() {
@@ -292,6 +297,9 @@ socket.on('lobbyMessage', function(data) {
             readyType = GameType.None;
             strangerReadyType = GameType.None;
 
+            // Re-enable ready button.
+            document.getElementById('readyButton').disabled = false; 
+
             // Reset update intervals to start value.
     	    updateInterval = startingUpdateInterval;
     	    updateIntervalP2 = startingUpdateInterval;
@@ -302,9 +310,26 @@ socket.on('lobbyMessage', function(data) {
             
             gameType = data.gameType;
 
+            // Set game type starting conditions.
+            switch (gameType) {
+                case GameType.Battle:
+                    // Draw empty battle meter.
+                    drawBattleMeter();
+                    break;
+
+                case GameType.TimeLimit:
+                case GameType.Endless:
+                    // Set the battle meter to hidden.
+                    document.getElementById('battleMeter').style.display = 'none';
+                    break;
+            }
+
             // Not waiting anymore, start game.
             state = GameState.Running;
             newGame();
+
+            // Disable ready button.
+            document.getElementById('readyButton').disabled = true; 
 
             // Start game timer.
             timer = setInterval(updateTimer,1000);
@@ -389,7 +414,7 @@ socket.on('gameMessage', function(data) {
         blocksP2.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
 
         // Stranger cleared a line...
-        addClearedLines(false);
+        addClearedLines(false,1);
         break;
     case MessageType.ScoreMessage:
         scoreP2 = data.score;

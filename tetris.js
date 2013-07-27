@@ -228,15 +228,16 @@ function checkRowsCompleted() {
             blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
             n++;
 
-            // Cleared own line!
-            addClearedLines(true);
-
             socket.emit('gameMessage', {type: MessageType.DeleteRowMessage, row: i});
         }
     }
 
     // Update the score and (possibly) the level.
     if (n > 0) {
+
+        // Cleared some lines!
+        addClearedLines(true,n);
+
         score += rowScores[n-1] * (level + 1);
 
         // Home-crafted formula for levelling up...
