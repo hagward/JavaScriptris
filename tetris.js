@@ -6,11 +6,10 @@
  * JavaScriptris.
  */
 
-Keys = {
+Direction = {
     LEFT : 97,
     RIGHT : 100,
     DOWN : 115,
-    ROTATE: 119
 }
 
 var BLOCKS = [
@@ -38,48 +37,60 @@ var keyDown = 0;
  * An abstract class that will be the base for both the moving and landed
  * tetrominos.
  */
-function Drawable {
+function Drawable() {
     this.context = null;
 
     this.draw = function() {};
-    this.move = function() {};
 }
 
 /**
  * Represents a Tetromino, i.e. four bricks, with methods for moving and
  * rotating.
  */
-function Tetromino {
+function Tetromino() {
     this.type = 0; // 'I', 'O' etc; index in BLOCKS
     this.rot = 0; // rotation
-    this.x = 0;
-    this.y = 0;
-    this.brickSize = 0;
+    this.xGridPos = 5;
+    this.yGridPos = 5;
+    this.brickSize = 30;
 
     this.draw = function() {
-        for (var i = 0; i < 4; i++)
-            this.context.fillRect(BLOCKS[this.type][this.rot][0] + this.x,
-                                  BLOCKS[this.type][this.rot][1] + this.y,
+        for (var i = 0; i < 4; i++) {
+            var xCoord = (BLOCKS[this.type][this.rot][i][0] + this.xGridPos) * this.brickSize;
+            var yCoord = (BLOCKS[this.type][this.rot][i][1] + this.yGridPos) * this.brickSize;
+            console.log('x: ' + xCoord + ' --- y: ' + yCoord);
+            this.context.fillRect(xCoord,
+                                  yCoord,
                                   this.brickSize,
                                   this.brickSize);
+        }
     };
 
-    this.move = function() {
-        switch (keyDown) {
-        case Keys.LEFT:
-            x--;
+    this.move = function(direction) {
+        switch (direction) {
+        case Direction.LEFT:
+            this.xGridPos--;
             break;
-        case Keys.RIGHT:
-            x++;
+        case Direction.RIGHT:
+            this.xGridPos++;
             break;
-        case Keys.DOWN:
-            y++;
+        case Direction.DOWN:
+            this.yGridPos++;
             break;
         }
     };
 
+    this.initRandom = function() {
+        this.type = Math.floor(Math.random() * BLOCKS.length);
+        this.rot = Math.floor(Math.random() * BLOCKS[this.type].length);
+    };
+
     this.rotate = function() {
         this.rot = (this.rot + 1) % 7;
+    };
+
+    this.getBricks = function() {
+        return BLOCKS[this.type][this.rot];
     };
 }
 Tetromino.prototype = new Drawable(); // let Tetromino inherit from Drawable
@@ -87,9 +98,13 @@ Tetromino.prototype = new Drawable(); // let Tetromino inherit from Drawable
 /**
  * A repository containing the blocks that have landed.
  */
-function LandedRepository {
+function LandedRepository() {
     this.modified = false; // we should only redraw if modified
     this.brickSize = 0;
+
+    // A two-dimensional array containing all the landed blocks. -1 means an
+    // empty space, and a value > -1 means a filled space where the value is
+    // an index in COLORS.
     this.brickArray = [];
     for (var i = 0; i < HEIGHT; i++)
         this.brickArray.push([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
@@ -99,7 +114,7 @@ function LandedRepository {
             for (var j = 0; j < WIDTH; j++) {
                 var cell = brickArray[i][j];
                 if (cell > -1) {
-                    this.context.fillStyle = color;
+                    this.context.fillStyle = COLORS[cell];
                     this.context.fillRect(j * this.brickSize,
                                           i * this.brickSize,
                                           this.brickSize,
@@ -112,6 +127,10 @@ function LandedRepository {
 
     this.isModified = function() {
         return this.modified;
+    };
+
+    this.getRow = function(row) {
+        return this.brickArray[row];
     };
 }
 LandedRepository.prototype = new Drawable();
@@ -182,15 +201,3 @@ function Player(width, height) {
     }
 }
 */
-
-function Game() {
-    this.landedCanvas = document.getElementById('landed');
-    this.movingCanvas = document.getElementById('moving');
-
-    // Return if canvas is not supported.
-    if (!this.landedCanvas.getContext)
-        return;
-
-    this.landedContext = this.landedCanvas.getContext('2d');
-    this.movingContext = this.movingCanvas.getContext('2d');
-}
