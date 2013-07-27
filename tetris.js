@@ -403,42 +403,47 @@ function run() {
     draw();
 }
 
-var message = document.getElementById('message');
-document.onkeypress = function(e) {
+var chatBox = document.getElementById('message');
+document.onkeydown = function(e) {
+    var keyCode = e.keyCode || e.which;
+
     // Make sure that the keystrokes aren't handled if the user is writing a
-    // a message.
+    // a message. Let the user switch between the chat box and the game by
+    // pressing the tab character.
     var curElement = document.activeElement;
-    if (e.which == 167) {
+    if (keyCode == 9) {
         e.preventDefault();
-        if (curElement == message)
-            message.blur();
+        if (curElement == chatBox)
+            chatBox.blur();
         else
-            message.focus();
+            chatBox.focus();
         return;
-    } else if (curElement == message)
+    } else if (curElement == chatBox)
         return;
 
-    switch (e.which) {
-    case 97: // 'a'
+    e.preventDefault();
+
+    switch (keyCode) {
+    case 37: // 'a'
         moveLeft();
         break;
-    case 100: // 'd'
+    case 38: // 'w'
+        rotate();
+        break;
+    case 39: // 'd'
         moveRight();
         break;
-    case 115: // 's'
+    case 40: // 's'
         update(); // move down
         socket.emit('gameMessage', {type: MessageType.MoveDownMessage});
-        break;
-    case 119: // 'w'
-        rotate();
         break;
     case 32: // space
         instaDrop();
         break;
-    case 112: // 'p'
+    case 80: // 'p'
         emitPauseToggle();
         break;
-    case 109: // 'm'
+    case 77: // 'm'
         monochrome = !monochrome;
         break;
     }

@@ -25,9 +25,9 @@
         <div id="scoreCount">0 - 0</div>   
 
         <div id="footer">
-            Controls: wasd + space<br>
+            <span class="bold">Controls:</span><br>
             m = mono-/multicolor<br>
-            § = focus/unfocus chat
+            tab = focus/unfocus chat
             <div id="pauseCount">p = pause (2 left)</div><br>
             <div id="playerCount">Number of connected players: </div><br>
             <div id="playerID">Not assigned id.</div>
@@ -37,9 +37,8 @@
         <div id="lobby">
             <textarea id="messageArea" readonly rows="5">--JavaScriptris Multiplayer--</textarea>
 
-            <div id="messageText">Message:</div>
+            Message:
             <input type="text" id="message" value="" onkeypress="keyPress(event);">
-            <div style="clear: both"></div>
 
             <div id="buttonContainer">
                 <select id="modeSelection">

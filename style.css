@@ -1,20 +1,28 @@
-button {
-    margin: 0;
-    padding: 0;
-}          
+body {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
 textarea {
     width: 100%;
+    height: 140px;
 }
+
 input {
     width: 85%;
     margin-bottom: 4px;
     float: right;
 }
+
+button {
+    padding: 1px 8px;
+}
+
 #header {
     font: 13pt Tahoma;
     text-align: center;
     margin-bottom: 4px;
 }
+
 #footer {
     font: 8pt Tahoma;
     color: grey;
@@ -22,52 +30,64 @@ input {
     margin-top: 4px;
     margin-bottom: 4px;
 }
+
 #content {
     width: 844px;
     margin: 0 auto;
     padding: 20px;
 }
+
 #lobby {
     width: 30%;
     display: block;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0 auto;
 }
+
 #messageArea {
     width: 99%;
     margin-bottom: 4px;
     resize: none;
 }
+
 #scoreCount {
-    font: 26pt Tahoma;
+    font-size: 2.3em;
     font-weight: bold;
     text-align: center; 
     color: grey;
 }
+
 #timeCount {
-    font: 34pt Tahoma;
+    font-size: 2.7em;
     font-weight: bold;
-    text-align: center; 
+    text-align: center;
     color: grey;
 }
-#messageText {
-    float: left;
-}
+
 #buttonContainer {
-    width: 100%;
     text-align: right;
 }
+
+#battleMeter {
+    display: none;
+    border: 1px dotted grey;
+}
+
 .canvas_main {
     float: left;
     border: 1px dotted grey;
     width: 300px;
 }
+
 .canvas_next {
     float: left;
     width: 120px;
 }
+
 .canvas_meter {
     display: block;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0 auto;
+}
+
+.bold {
+    font-weight: bold;
 }
