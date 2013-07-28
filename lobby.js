@@ -47,7 +47,7 @@ function sendReady() {
 	if (getSelectedGameType() == GameType.None) {
 		addMessage('Please select a game mode!','System');
 	} else {
-	 	addMessage('You are ready for a ' + getGameTypeString(getSelectedGameType()) + ' game!','System');
+	 	addMessage('You are ready for a(n) ' + getGameTypeString(getSelectedGameType()) + ' game!','System');
 	 	readyType = getSelectedGameType();
 
 		// Send Start- or ReadyMessage.

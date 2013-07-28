@@ -165,8 +165,10 @@ function addClearedLines(ownLines,lines) {
 		}
 	}
 
-    // Updated values => draw new battle meter.
-    drawBattleMeter();     
+    if (gameType == GameType.Battle) {
+        // Updated values => draw new battle meter.
+        drawBattleMeter();     
+    }
 }
 
 function drawBattleMeter() {
