@@ -62,7 +62,21 @@ var tetros = [
     [[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]], // S
     [[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]] // Z
 ];
-var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
+
+// Contains the color for each tetromino. Note that the opacity must be written
+// out because it is needed for the transparent 'ghost' tetrominos.
+var colors = [
+    'rgba(0, 255, 255, 1.0)', // cyan
+    'rgba(255, 255, 0, 1.0)', // yellow
+    'rgba(128, 0, 128, 1.0)', // purple
+    'rgba(0, 0, 255, 1.0)', // blue
+    'rgba(255, 127, 0, 1.0)', // orange
+    'rgba(0, 255, 0, 1.0)', // green
+    'rgba(255, 0, 0, 1.0)' // red
+];
+var ghostColors = [];
+for (var i = 0; i < colors.length; i++)
+    ghostColors.push(colors[i].replace('1.0', '0.2'));
 
 var mainCanvas = [
     document.getElementById('maincanvas_p1'),
@@ -278,6 +292,20 @@ function checkStartsWithCollision(b) {
     return false;
 }
 
+function getGhostYPosition() {
+    if (state != GameState.Running) return;
+    var ghostY = y;
+    while (true) {
+        for (var i = 0; i < 4; i++) {
+            // If the block is colliding with the floor or another block:
+            if (ghostY + tetros[curTet][r][i][Y] >= height - 1 ||
+                    blocks[ghostY+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1)
+                return ghostY;
+        }
+        ghostY++;
+    }
+}
+
 // This function handles all the game logic. It updates the tetromino's
 // position and checks for collisions.
 function update() {
@@ -348,17 +376,31 @@ function draw() {
 
     switch (state) {
     case GameState.Running:
+        // Draw the 'ghost' tetromino, i.e. the one showing where the current
+        // tetromino is about to drop.
+        var ghostY = getGhostYPosition();
+        mainContext[P1].fillStyle = (monochrome) ? 'rgba(0, 0, 0, 0.5)' : ghostColors[curTet];
+        for (var i = 0; i < 4; i++)
+            mainContext[P1].fillRect((x+tetros[curTet][r][i][X])*bsize,
+                (ghostY+tetros[curTet][r][i][Y])*bsize,
+                bsize, bsize);
+
         if (!monochrome) {
             mainContext[P1].fillStyle = colors[curTet];
             nextContext[P1].fillStyle = colors[nextTet];
             mainContext[P2].fillStyle = colors[curTetP2];
             nextContext[P2].fillStyle = colors[nextTetP2];
+        } else {
+            // Restore the opacity.
+            mainContext[P1].fillStyle = 'rgba(0, 0, 0, 1.0)';
         }
+
         for (var i = 0; i < 4; i++) {
             // Draw the current moving tetromino.
             mainContext[P1].fillRect((x+tetros[curTet][r][i][X])*bsize,
                     (y+tetros[curTet][r][i][Y])*bsize,
                     bsize, bsize);
+
             // Draw the next tetromino.
             nextContext[P1].fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
                     3*bsize + tetros[nextTet][0][i][Y]*bsize,
