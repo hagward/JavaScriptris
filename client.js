@@ -38,7 +38,8 @@ GameType = {
 	None : 0,
     Endless : 1,
     TimeLimit : 2,
-    Battle : 3
+    Battle : 3,
+    Coop : 4
 }
 
 var readyType = GameType.None;
@@ -146,6 +147,8 @@ function checkGameTypeRules() {
 }
 
 function addClearedLines(ownLines,lines) {
+    if (gameType != GameType.Battle) return;
+
 	if (ownLines) {
 		clearedLines+=lines;
 
@@ -154,7 +157,7 @@ function addClearedLines(ownLines,lines) {
 			strangerClearedLines-=lines;
 
 			// Emit new cleared line number to stranger.
-			socket.emit('gameMessage',{type: MessageType.BattleMessage, id: userid, lines:strangerClearedLines});
+			socket.emit('gameMessage', {type: MessageType.BattleMessage, id: userid, lines:strangerClearedLines});
 		}
 	} else {
 		strangerClearedLines+=lines;
@@ -166,7 +169,7 @@ function addClearedLines(ownLines,lines) {
 	}
 
     // Updated values => draw new battle meter.
-    drawBattleMeter();     
+    drawBattleMeter();
 }
 
 function drawBattleMeter() {
@@ -386,50 +389,75 @@ socket.on('lobbyMessage', function(data) {
 // TODO: The values received from Player 2 should probably checked in some way.
 socket.on('gameMessage', function(data) {
     switch (data.type) {
-    // The other player spawned a new tetromino:
-    case MessageType.NewTetrominoMessage:
-        curTetP2 = data.current;
-        nextTetP2 = data.next;
-        rP2 = data.rotation;
-        xP2 = data.xPos;
-        yP2 = data.yPos;
-        break;
-    case MessageType.MoveLeftMessage:
-        xP2--;
-        break;
-    case MessageType.MoveRightMessage:
-        xP2++;
-        break;
-    case MessageType.MoveDownMessage:
-        yP2++;
-        break;
-    case MessageType.RotateMessage:
-        rP2 = data.rotation;
-        break;
-    case MessageType.LockBlocksMessage:
-        blocksP2 = data.blocks;
-        break;
-    case MessageType.DeleteRowMessage:
-        blocksP2.splice(data.row, 1);
-        blocksP2.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
+        // The other player spawned a new tetromino:
+        case MessageType.NewTetrominoMessage:
+            curTetP2 = data.current;
+            nextTetP2 = data.next;
+            rP2 = data.rotation;
+            xP2 = data.xPos;
+            yP2 = data.yPos;
+            break;
 
-        // Stranger cleared a line...
-        addClearedLines(false,1);
-        break;
-    case MessageType.ScoreMessage:
-        scoreP2 = data.score;
-        break;
-    case MessageType.LevelMessage:
-        levelP2 = data.level;
-        if (updateIntervalP2 != data.interval) {
-            clearInterval(gameLoopP2);
-            gameLoopP2 = setInterval(updateP2, data.interval);
-            updateIntervalP2 = data.interval;
-        }
-        break;
-    case MessageType.BattleMessage:
-    	clearedLines = data.lines;
-    	break;
+        case MessageType.MoveLeftMessage:
+            xP2--;
+            break;
+
+        case MessageType.MoveRightMessage:
+            xP2++;
+            break;
+
+        case MessageType.MoveDownMessage:
+            yP2++;
+            break;
+
+        case MessageType.RotateMessage:
+            rP2 = data.rotation;
+            break;
+
+        case MessageType.LockBlocksMessage:
+            if (gameType == GameType.Coop) blocks = data.blocks;
+            else blocksP2 = data.blocks;
+            break;
+
+        case MessageType.DeleteRowMessage:
+            if (gameType == GameType.Coop) {
+                for (var i = 0; i < data.rows.length; i++) {
+                    blocks.splice(data.rows[i], 1);
+                    var newLine = [];
+                    for (var i = 0; i < width; i++)
+                        newLine.push(-1);
+                    blocks.unshift(newLine);
+                }
+            } else {
+                for (var i = 0; i < data.rows.length; i++) {
+                    blocksP2.splice(data.rows[i], 1);
+                    var newLine = [];
+                    for (var i = 0; i < width; i++)
+                        newLine.push(-1);
+                    blocksP2.unshift(newLine);
+                }
+            }
+
+            // Stranger cleared a line...
+            addClearedLines(false, 1);
+            break;
+
+        case MessageType.ScoreMessage:
+            scoreP2 = data.score;
+            break;
+
+        case MessageType.LevelMessage:
+            levelP2 = data.level;
+            if (updateIntervalP2 != data.interval) {
+                clearInterval(gameLoopP2);
+                gameLoopP2 = setInterval(updateP2, data.interval);
+                updateIntervalP2 = data.interval;
+            }
+            break;
+
+        case MessageType.BattleMessage:
+        	clearedLines = data.lines;
+        	break;
     }
     draw();
 });

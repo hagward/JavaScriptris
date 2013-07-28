@@ -11,15 +11,14 @@
 
         <div id="content">
         	<canvas id="nexttetrocanvas_p1" class="canvas_next" width="120" height="180"></canvas>
-            <canvas id="maincanvas_p1" class="canvas_main" width="300" height="480">
+            <canvas id="maincanvas" class="canvas_main" width="600" height="480">
                 Your browser does not support canvas!
             </canvas>
-            <canvas id="maincanvas_p2" class="canvas_main" width="300" height="480"></canvas>
             <canvas id="nexttetrocanvas_p2" class="canvas_next" width="120" height="180"></canvas>
             <div style="clear: both"></div>
         </div>
 
-        <canvas id="battleMeter" class="canvas_meter" width="600" height="40"></canvas> 
+        <canvas id="battleMeter" width="600" height="40"></canvas> 
 
         <div id="timeCount"></div>
         <div id="scoreCount">0 - 0</div>   
@@ -46,6 +45,7 @@
                     <option>Endless</option>
                     <option>Time attack</option>
                     <option>Battle</option>
+                    <option>Coop</option>
                 </select>
                 <button id="readyButton" type="button" onclick="sendReady();">I'm ready!</button>
                 <button id="sendButton" type="button" onclick="sendMessage();">Send</button>

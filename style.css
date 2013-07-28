@@ -17,6 +17,10 @@ button {
     padding: 1px 8px;
 }
 
+canvas {
+    display: block;
+}
+
 #header {
     font: 13pt Tahoma;
     text-align: center;
@@ -70,22 +74,16 @@ button {
 #battleMeter {
     display: none;
     border: 1px dotted grey;
+    margin: 0 auto;
 }
 
 .canvas_main {
     float: left;
     border: 1px dotted grey;
-    width: 300px;
 }
 
 .canvas_next {
     float: left;
-    width: 120px;
-}
-
-.canvas_meter {
-    display: block;
-    margin: 0 auto;
 }
 
 .bold {
