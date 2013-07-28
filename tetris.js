@@ -66,13 +66,13 @@ var tetros = [
 // Contains the color for each tetromino. Note that the opacity must be written
 // out because it is needed for the transparent 'ghost' tetrominos.
 var colors = [
-    'rgba(0, 255, 255, 1.0)', // cyan
-    'rgba(255, 255, 0, 1.0)', // yellow
-    'rgba(128, 0, 128, 1.0)', // purple
-    'rgba(0, 0, 255, 1.0)', // blue
-    'rgba(255, 127, 0, 1.0)', // orange
-    'rgba(0, 255, 0, 1.0)', // green
-    'rgba(255, 0, 0, 1.0)' // red
+    'rgba(51, 204, 204, 1.0)', // cyan
+    'rgba(255, 255, 51, 1.0)', // yellow
+    'rgba(204, 51, 153, 1.0)', // purple
+    'rgba(51, 102, 255, 1.0)', // blue
+    'rgba(255, 153, 51, 1.0)', // orange
+    'rgba(51, 204, 51, 1.0)', // green
+    'rgba(255, 51, 51, 1.0)' // red
 ];
 var ghostColors = [];
 for (var i = 0; i < colors.length; i++)
@@ -309,7 +309,7 @@ function getGhostYPosition() {
 // This function handles all the game logic. It updates the tetromino's
 // position and checks for collisions.
 function update() {
-    if (state != GameState.Running) return;
+    if (state != GameState.Running) return true;
     for (var i = 0; i < 4; i++) {
         // If the block is colliding with the floor or another block:
         if (y + tetros[curTet][r][i][Y] >= height - 1 ||
