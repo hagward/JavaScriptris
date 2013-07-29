@@ -20,33 +20,12 @@
 
 var updateInterval = 1000;
 
-// Constants for x and y indices in the block lists.
-var X = 0;
-var Y = 1;
-
 var level = 0;
 var maxLevel = 99;
 var score = 0;
 var rowScores = [40, 100, 300, 1200];
 
 var monochrome = false;
-
-// Contains all 19 fixed tetrominoes. The first element in all lists is the
-// pivot element that the other blocks rotate around.
-var tetros = [
-	[[[0,0],[0,-1],[0,1],[0,2]], [[0,0],[-1,0],[1,0],[2,0]]],			// I
-	[[[0,0],[1,0],[0,-1],[1,-1]]],										// O
-	[[[0,0],[0,-1],[0,1],[1,0]], [[0,0],[-1,0],[1,0],[0,1]],			// T
-			[[0,0],[0,-1],[0,1],[-1,0]], [[0,0],[-1,0],[1,0],[0,-1]]],
-	[[[0,0],[0,-1],[0,1],[1,-1]], [[0,0],[-1,0],[1,0],[1,1]],			// J
-			[[0,0],[0,-1],[0,1],[-1,1]], [[0,0],[-1,0],[1,0],[-1,-1]]],
-	[[[0,0],[0,-1],[0,1],[1,1]], [[0,0],[-1,0],[1,0],[-1,1]],			// L
-			[[0,0],[0,-1],[0,1],[-1,-1]], [[0,0],[-1,0],[1,0],[1,-1]]],
-	[[[0,0],[0,-1],[1,0],[1,1]], [[0,0],[0,1],[-1,1],[1,0]]],			// S
-	[[[0,0],[0,1],[1,0],[1,-1]], [[0,0],[-1,0],[0,1],[1,1]]]			// Z
-];
-
-var colors = ['cyan', 'yellow', 'purple', 'blue', 'orange', 'green', 'red'];
 
 // Determines whether to show the moving tetromino or not.
 var running = true;
@@ -58,11 +37,49 @@ var ctx1 = c1.getContext('2d');
 var ctx2 = c2.getContext('2d');
 
 // Block size.
-var bsize = c1.width / 10;
+var bsize = 30;
 
-// Dimensions of the canvas in #blocks.
-var width = c1.width / bsize;
-var height = c1.height / bsize;
+// Dimensions in #blocks.
+var width = 10;
+var height = 22;
+
+c1.width = width * bsize;
+c1.height = height * bsize;
+c2.width = bsize * 6;
+c2.height = bsize * 4;
+
+c1.style.marginLeft = '-' + (c1.width / 2) + 'px';
+c2.style.marginLeft = '-' + (c1.width) + 'px';
+document.getElementById('game').style.height = c1.height + 'px';
+
+var colors = [
+	'#40FFFF',	// cyan
+	'#FFFF40',	// yellow
+	'#C030C0',	// purple
+	'#4040FF',	// blue
+	'#FF9F40',	// orange
+	'#40FF40',	// green
+	'#FF4040'	// red
+];
+
+// Constants for x and y indices in the block lists.
+var X = 0;
+var Y = 1;
+
+// Contains all 19 fixed tetrominoes. The first element in all lists is the
+// pivot element that the other blocks rotate around.
+var tetros = [
+	[[[0,0],[-1,0],[1,0],[2,0]], [[0,0],[0,-1],[0,1],[0,2]]],			// I
+	[[[0,0],[1,0],[0,-1],[1,-1]]],										// O
+	[[[0,0],[-1,0],[1,0],[0,-1]], [[0,0],[0,-1],[0,1],[1,0]],			// T
+			[[0,0],[-1,0],[1,0],[0,1]],	[[0,0],[0,-1],[0,1],[-1,0]]],
+	[[[0,0],[-1,0],[1,0],[-1,-1]], [[0,0],[0,-1],[0,1],[1,-1]],			// J
+			[[0,0],[-1,0],[1,0],[1,1]], [[0,0],[0,-1],[0,1],[-1,1]]],
+	[[[0,0],[-1,0],[1,0],[1,-1]], [[0,0],[0,-1],[0,1],[1,1]],			// L
+			[[0,0],[-1,0],[1,0],[-1,1]], [[0,0],[0,-1],[0,1],[-1,-1]]],
+	[[[0,0],[0,1],[-1,1],[1,0]], [[0,0],[0,-1],[1,0],[1,1]]],			// S
+	[[[0,0],[-1,0],[0,1],[1,1]], [[0,0],[0,1],[1,0],[1,-1]]]			// Z
+];
 
 // Initialize a two-dimensional array representing the board. A cell either has
 // the value -1 (uninitialized) or an index from the array 'colors',
@@ -84,12 +101,16 @@ var r;
 
 var gameLoop;
 
+// Start the game!
+newGame();
+
 function newGame() {
 	level = 0;
 	score = 0;
 	running = true;
 	paused = false;
 
+	// Reset the block array.
 	for (var i = 0; i < height; i++)
 		for (var j = 0; j < width; j++)
 			blocks[i][j] = -1;
@@ -110,15 +131,21 @@ function newGame() {
 function newTetromino() {
 	curTet = nextTet;
 	nextTet = Math.floor(Math.random() * 7);
-	r = Math.floor(Math.random() * tetros[curTet].length);
+	r = 0;
+
+	// Place the tetromino in the middle or middle-left column, and just below
+	// the ceiling.
 	x = 4;
-	y = 2;
-	
-	// Move the block just below the ceiling.
-	for (var i = 0; i < 4; i++)
-		if (tetros[curTet][r][i][Y] < y)
-			y = tetros[curTet][r][i][Y];
-	y *= -1;
+	switch (curTet) {
+		case 0:
+		case 5:
+		case 6:
+			y = 0;
+			break;
+		default:
+			y = 1;
+			break;
+	}
 	
 	// Game over if the newly spawned tetromino starts on any old ones.
 	for (var i = 0; i < 4; i++) {
@@ -184,7 +211,9 @@ function checkRowsCompleted() {
 		if (complete) {
 			// Remove the row and insert a new zero:ed one at the beginning.
 			blocks.splice(i, 1);
-			blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
+			var newLine = [];
+			for (var i = 0; i < width; i++) newLine.push(-1);
+			blocks.unshift(newLine); // not too elegant...
 			n++;
 		}
 	}
@@ -233,7 +262,7 @@ function togglePaused() {
 // This function handles all the game logic. It updates the tetromino's
 // position and checks for collisions.
 function update() {
-	if (paused || !running) return;
+	if (paused || !running) return true;
 	for (var i = 0; i < 4; i++) {
 		if (y + tetros[curTet][r][i][Y] >= height - 1 ||
 				blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
@@ -242,7 +271,7 @@ function update() {
 			newTetromino();
 			return true;
 		}
-	}	
+	}
 	y++;
 	return false;
 }
@@ -270,9 +299,12 @@ function draw() {
 			ctx1.fillRect((x+tetros[curTet][r][i][X])*bsize,
 					(y+tetros[curTet][r][i][Y])*bsize,
 					bsize, bsize);
-			// Draw the next tetromino.
-			ctx2.fillRect(bsize + tetros[nextTet][0][i][X]*bsize,
-					3*bsize + tetros[nextTet][0][i][Y]*bsize,
+
+			// Draw the next tetromino in the center of its canvas.
+			var nextTetX = (nextTet == 0) ? bsize : 2 * bsize;
+			var nextTetY = (nextTet == 5 || nextTet == 6) ? bsize : 2 * bsize;
+			ctx2.fillRect(nextTetX + tetros[nextTet][0][i][X]*bsize,
+					nextTetY + tetros[nextTet][0][i][Y]*bsize,
 					bsize, bsize);
 		}
 	} else {
@@ -304,34 +336,41 @@ function run() {
 	draw();
 }
 
-newGame();
-
-document.onkeypress = function(e) {
-	switch (e.which) {
-	case 97: // 'a'
-		moveLeft();
-		break;
-	case 100: // 'd'
-		moveRight();
-		break;
-	case 115: // 's'
-		update(); // move down
-		break;
-	case 119: // 'w'
-		rotate();
-		break;
-	case 32: // space
-		instaDrop();
-		break;
-	case 112: // 'p'
-		togglePaused();
-		break;
-	case 114: // 'r'
-		newGame();
-		break;
-	case 109: // 'm'
-		monochrome = !monochrome;
-		break;
+document.onkeydown = function(e) {
+	var keyCode = e.keyCode || e.which;
+	switch (keyCode) {
+		case 37: // left
+			e.preventDefault();
+			moveLeft();
+			break;
+		case 38: // up
+			e.preventDefault();
+			rotate();
+			break;
+		case 39: // right
+			e.preventDefault();
+			moveRight();
+			break;
+		case 40: // down
+			e.preventDefault();
+			update();
+			break;
+		case 32: // space
+			e.preventDefault();
+			instaDrop();
+			break;
+		case 80: // 'p'
+			e.preventDefault();
+			togglePaused();
+			break;
+		case 82: // 'r'
+			e.preventDefault();
+			newGame();
+			break;
+		case 77: // 'm'
+			e.preventDefault();
+			monochrome = !monochrome;
+			break;
 	}
 	draw();
 }
