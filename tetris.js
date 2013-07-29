@@ -20,10 +20,10 @@
 
 var updateInterval = 1000;
 
-var level = 0;
-var maxLevel = 99;
-var score = 0;
-var rowScores = [40, 100, 300, 1200];
+var maxLevel = 10;
+var ghostOpacity = '0.2';
+
+var lineClearsPerAction = [1, 3, 5, 8];
 
 var monochrome = false;
 
@@ -41,32 +41,36 @@ var bsize = 30;
 
 // Dimensions in #blocks.
 var width = 10;
-var height = 22;
+var height = 20;
 
 c1.width = width * bsize;
 c1.height = height * bsize;
 c2.width = bsize * 6;
 c2.height = bsize * 4;
 
+// Adjust the position of the canvases.
 c1.style.marginLeft = '-' + (c1.width / 2) + 'px';
 c2.style.marginLeft = '-' + (c1.width) + 'px';
 document.getElementById('game').style.height = c1.height + 'px';
 
 var colors = [
-	'#40FFFF',	// cyan
-	'#FFFF40',	// yellow
-	'#C030C0',	// purple
-	'#4040FF',	// blue
-	'#FF9F40',	// orange
-	'#40FF40',	// green
-	'#FF4040'	// red
+	'rgba(51, 204, 204, 1.0)',	// cyan
+    'rgba(255, 255, 51, 1.0)',	// yellow
+    'rgba(204, 51, 153, 1.0)',	// purple
+    'rgba(51, 102, 255, 1.0)',	// blue
+    'rgba(255, 153, 51, 1.0)',	// orange
+    'rgba(51, 204, 51, 1.0)',	// green
+    'rgba(255, 51, 51, 1.0)'	// red
 ];
+var ghostColors = [];
+for (var i = 0; i < colors.length; i++)
+    ghostColors.push(colors[i].replace('1.0', ghostOpacity));
 
 // Constants for x and y indices in the block lists.
 var X = 0;
 var Y = 1;
 
-// Contains all 19 fixed tetrominoes. The first element in all lists is the
+// Contains all 19 fixed tetriminos. The first element in all lists is the
 // pivot element that the other blocks rotate around.
 var tetros = [
 	[[[0,0],[-1,0],[1,0],[2,0]], [[0,0],[0,-1],[0,1],[0,2]]],			// I
@@ -85,195 +89,128 @@ var tetros = [
 // the value -1 (uninitialized) or an index from the array 'colors',
 // representing a block of a certain color at that position.
 var blocks = [];
-for (var i = 0; i < height; i++) {
-	blocks.push([]);
-	for (var j = 0; j < width; j++)
-		blocks[i].push(-1);
-}
+resetAllBlocks();
 
 // A value between 0-7 (see Tetromino enum).
 var curTet, nextTet;
 
 var x, y;
+var xNext, yNext;
 
-// Rotation (i.e. "index in tetrominoes array").
+// Rotation (i.e. "index in tetriminos array").
 var r;
+
+var score;
+var level;
+var lineClears;
 
 var gameLoop;
 
 // Start the game!
 newGame();
 
-function newGame() {
-	level = 0;
-	score = 0;
-	running = true;
-	paused = false;
-
-	// Reset the block array.
-	for (var i = 0; i < height; i++)
-		for (var j = 0; j < width; j++)
-			blocks[i][j] = -1;
-	
-	nextTet = Math.floor(Math.random() * 7);
-	newTetromino();
-
-	clearInterval(gameLoop);
-	gameLoop = setInterval(run, updateInterval);
-
-	// Need to draw before first update for the first tetromino to appear at the
-	// very top.
+/**
+ * Key listener.
+ */
+document.onkeydown = function(e) {
+	var keyCode = e.keyCode || e.which;
+	switch (keyCode) {
+		case 37: // left
+			e.preventDefault();
+			if (canMoveLeft(curTet, x, y, r))
+				x--;
+			break;
+		case 38: // up
+			e.preventDefault();
+			if (canRotate(curTet, x, y, r))
+				r = (r + 1) % tetros[curTet].length;
+			break;
+		case 39: // right
+			e.preventDefault();
+			if (canMoveRight(curTet, x, y, r))
+				x++;
+			break;
+		case 40: // down
+			e.preventDefault();
+			update();
+			break;
+		case 32: // space
+			e.preventDefault();
+			hardDrop();
+			break;
+		case 80: // 'p'
+			e.preventDefault();
+			togglePaused();
+			break;
+		case 82: // 'r'
+			e.preventDefault();
+			newGame();
+			break;
+		case 77: // 'm'
+			e.preventDefault();
+			monochrome = !monochrome;
+			break;
+	}
 	draw();
 }
 
-// Creates a new tetromino by setting the 'next' one as the current and
-// generating a new 'next' tetromino.
-function newTetromino() {
-	curTet = nextTet;
-	nextTet = Math.floor(Math.random() * 7);
-	r = 0;
-
-	// Place the tetromino in the middle or middle-left column, and just below
-	// the ceiling.
-	x = 4;
-	switch (curTet) {
-		case 0:
-		case 5:
-		case 6:
-			y = 0;
-			break;
-		default:
-			y = 1;
-			break;
-	}
-	
-	// Game over if the newly spawned tetromino starts on any old ones.
+function canLand(tetromino, x, y, rotation) {
 	for (var i = 0; i < 4; i++) {
-		if (blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] > -1) {
-			gameOver();
-			return;
-		}
+		if (y + tetros[tetromino][rotation][i][Y] >= height - 1 ||
+				blocks[y+tetros[tetromino][rotation][i][Y]+1]
+					  [x+tetros[tetromino][rotation][i][X]] > -1)
+			return true;
 	}
+	return false;
 }
 
-function moveLeft() {
-	if (paused || !running) return;
+function canMoveLeft(tetromino, x, y, rotation) {
 	for (var i = 0; i < 4; i++)
-		if (x + tetros[curTet][r][i][X] <= 0
-				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]-1] > -1)
+		if (x + tetros[tetromino][rotation][i][X] <= 0
+				|| blocks[y+tetros[tetromino][rotation][i][Y]]
+						 [x+tetros[tetromino][rotation][i][X]-1] > -1)
 			return false;
-	x--;
 	return true;
 }
 
-function moveRight() {
-	if (paused || !running) return;
+function canMoveRight(tetromino, x, y, rotation) {
 	for (var i = 0; i < 4; i++)
-		if (x + tetros[curTet][r][i][X] >= width - 1
-				|| blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]+1] > -1)
+		if (x + tetros[tetromino][rotation][i][X] >= width - 1
+				|| blocks[y+tetros[tetromino][rotation][i][Y]]
+						 [x+tetros[tetromino][rotation][i][X]+1] > -1)
 			return false;
-	x++;
 	return true;
 }
 
-function rotate() {
-	if (paused || !running) return;
-	var newRot = (r + 1) % tetros[curTet].length;
+function canRotate(tetromino, x, y, rotation) {
+	var newRot = (rotation + 1) % tetros[tetromino].length;
 	for (var i = 0; i < 4; i++) {
-		var newX = x + tetros[curTet][newRot][i][X];
-		var newY = y + tetros[curTet][newRot][i][Y];
+		var newX = x + tetros[tetromino][newRot][i][X];
+		var newY = y + tetros[tetromino][newRot][i][Y];
 		if (newX < 0 || newX >= width || newY < 0 || newY >= height
 				|| blocks[newY][newX] > -1)
 			return false;
 	}
-	r = newRot;
 	return true;
 }
 
-// Save the last moving blocks as 'locked' blocks.
-function lockCurrent() {
+function canSpawn(tetromino, x, y, rotation) {
 	for (var i = 0; i < 4; i++)
-		blocks[y+tetros[curTet][r][i][Y]][x+tetros[curTet][r][i][X]] = curTet;
+		if (blocks[y+tetros[tetromino][rotation][i][Y]]
+				  [x+tetros[tetromino][rotation][i][X]] > -1)
+			return false;
+	return true;
 }
 
-// Checks for completed rows, deletes them and updates the score and level
-// respectively. Should probably be broken up into smaller functions.
-function checkRowsCompleted() {
-	var n = 0;
-	for (var i = 0; i < height; i++) {
-		var complete = true;
-		for (var j = 0; j < width; j++) {
-			if (blocks[i][j] == -1) {
-				complete = false;
-				break;
-			}
-		}
-		if (complete) {
-			// Remove the row and insert a new zero:ed one at the beginning.
-			blocks.splice(i, 1);
-			var newLine = [];
-			for (var i = 0; i < width; i++) newLine.push(-1);
-			blocks.unshift(newLine); // not too elegant...
-			n++;
-		}
+function deleteLines(lines) {
+	var newLine = [];
+	for (var i = 0; i < width; i++)
+		newLine.push(-1);
+
+	for (var i = 0; i < lines.length; i++) {
+		blocks.splice(lines[i], 1);
+		blocks.unshift(newLine);
 	}
-	
-	// Update the score and (possibly) the level.
-	if (n > 0) {
-		score += rowScores[n-1] * (level + 1);
-		
-		// Home-crafted formula for levelling up...
-		var newLevel = Math.floor(score/(200*(level+1)));
-		if (newLevel > level) {
-			level = (newLevel < maxLevel) ? newLevel : maxLevel;
-			
-			var newInterval = updateInterval - 30 * level;
-			if (newInterval > 0) {
-				updateInterval = newInterval;
-				clearInterval(gameLoop);
-				gameLoop = setInterval(run, updateInterval);
-			}
-		}
-	}
-}
-
-function gameOver() {
-	clearInterval(gameLoop);
-	running = false;
-}
-
-// Calls update() until the current tetromino reaches the bottom.
-function instaDrop() {
-	if (paused || !running) return;
-	while (!update());
-}
-
-function togglePaused() {
-	// The game must be running to be pausable.
-	if (!running) return;
-
-	if (paused)
-		gameLoop = setInterval(run, updateInterval);
-	else
-		clearInterval(gameLoop);
-	paused = !paused;
-}
-
-// This function handles all the game logic. It updates the tetromino's
-// position and checks for collisions.
-function update() {
-	if (paused || !running) return true;
-	for (var i = 0; i < 4; i++) {
-		if (y + tetros[curTet][r][i][Y] >= height - 1 ||
-				blocks[y+tetros[curTet][r][i][Y]+1][x+tetros[curTet][r][i][X]] > -1) {
-			lockCurrent();
-			checkRowsCompleted();
-			newTetromino();
-			return true;
-		}
-	}
-	y++;
-	return false;
 }
 
 function draw() {
@@ -283,7 +220,7 @@ function draw() {
 	
 	if (monochrome) ctx1.fillStyle = 'black';
 	
-	// Draw the locked tetrominos.
+	// Draw the locked tetriminos.
 	for (var i = 0; i < height; i++)
 		for (var j = 0; j < width; j++)
 			if (blocks[i][j] > -1) {
@@ -307,6 +244,15 @@ function draw() {
 					nextTetY + tetros[nextTet][0][i][Y]*bsize,
 					bsize, bsize);
 		}
+
+		// Draw the ghost tetromino.
+		var ghostY = getGhostYPosition(curTet, x, y, r);
+		ctx1.fillStyle = (monochrome) ? 'rgba(0, 0, 0, ' + ghostOpacity + ')'
+				: ghostColors[curTet];
+		for (var i = 0; i < 4; i++)
+			ctx1.fillRect((x+tetros[curTet][r][i][X])*bsize,
+            	(ghostY+tetros[curTet][r][i][Y])*bsize,
+            	bsize, bsize);
 	} else {
 		// Game over.
 		ctx1.fillStyle = (monochrome) ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 0, 0, 0.3)";
@@ -331,46 +277,191 @@ function draw() {
 	ctx1.fillText("Level: " + level, c1.width-60, 18);
 }
 
+/**
+ * Returns a list containing the indices of the complete rows.
+ */
+function getCompleteLines() {
+	var completeLines = [];
+	for (var i = 0; i < height; i++) {
+		var complete = true;
+		for (var j = 0; j < width; j++) {
+			if (blocks[i][j] == -1) {
+				complete = false;
+				break;
+			}
+		}
+		if (complete)
+			completeLines.push(i);
+	}
+	return completeLines;
+}
+
+function getGhostYPosition(tetromino, x, y, rotation) {
+    var ghostY = y;
+    while (true) {
+        for (var i = 0; i < 4; i++) {
+            // If the block is colliding with the floor or another block:
+            if (ghostY + tetros[tetromino][rotation][i][Y] >= height - 1 ||
+                    blocks[ghostY+tetros[tetromino][rotation][i][Y]+1]
+                    	  [x+tetros[tetromino][rotation][i][X]] > -1)
+                return ghostY;
+        }
+        ghostY++;
+    }
+}
+
+function getLevel(linesCleared) {
+	return Math.floor(linesCleared / 5) + 1;
+}
+
+function getLineClears(numLines) {
+	return lineClearsPerAction[numLines - 1];
+}
+
+/**
+ * Returns the score awarded for deleting the specified rows.
+ */
+function getLinesScore(numLines, level) {
+	return 100 * lineClearsPerAction[numLines - 1] * level;
+}
+
+/*
+ * Returns a list containing a new random tetromino (i.e. a number in the range
+ * [0, 6]), and a new x and y value.
+ */
+function getNewRandomTetromino() {
+	var newTet = Math.floor(Math.random() * 7);
+
+	// Place the tetromino in the middle or middle-left column, and just below
+	// the ceiling.
+	var newX = 4;
+	var newY = 1;
+	switch (newTet) {
+		case 0:
+		case 5:
+		case 6:
+			newY = 0;
+			break;
+	}
+
+	return [newTet, newX, newY];
+}
+
+// Calls update() until the current tetromino reaches the bottom.
+function hardDrop() {
+	if (paused || !running)
+		return;
+	while (update());
+}
+
+function landTetromino(tetromino, x, y, rotation) {
+	for (var i = 0; i < 4; i++)
+		blocks[y+tetros[tetromino][rotation][i][Y]]
+			  [x+tetros[tetromino][rotation][i][X]] = tetromino;
+}
+
+function newGame() {
+	level = 1;
+	score = 0;
+	lineClears = 0;
+	running = true;
+	paused = false;
+
+	resetAllBlocks();
+	
+	var newTet = getNewRandomTetromino();
+	curTet = newTet[0];
+	x = newTet[1];
+	y = newTet[2];
+	r = 0;
+
+	newTet = getNewRandomTetromino();
+	nextTet = newTet[0];
+	xNext = newTet[1];
+	yNext = newTet[2];
+
+	clearInterval(gameLoop);
+	gameLoop = setInterval(run, updateInterval);
+
+	// Need to draw before first update for the first tetromino to appear at the
+	// very top.
+	draw();
+}
+
+/**
+ * Clears all blocks and resizes the blocks array to fit the game dimensions if
+ * needed.
+ */
+function resetAllBlocks() {
+	for (var i = 0; i < height; i++) {
+		if (blocks.length <= i)
+			blocks.push([]);
+		for (var j = 0; j < width; j++) {
+			if (blocks[i].length <= j)
+				blocks[i].push(-1);
+			else
+				blocks[i][j] = -1;
+		}
+	}
+}
+
 function run() {
 	update();
 	draw();
 }
 
-document.onkeydown = function(e) {
-	var keyCode = e.keyCode || e.which;
-	switch (keyCode) {
-		case 37: // left
-			e.preventDefault();
-			moveLeft();
-			break;
-		case 38: // up
-			e.preventDefault();
-			rotate();
-			break;
-		case 39: // right
-			e.preventDefault();
-			moveRight();
-			break;
-		case 40: // down
-			e.preventDefault();
-			update();
-			break;
-		case 32: // space
-			e.preventDefault();
-			instaDrop();
-			break;
-		case 80: // 'p'
-			e.preventDefault();
-			togglePaused();
-			break;
-		case 82: // 'r'
-			e.preventDefault();
-			newGame();
-			break;
-		case 77: // 'm'
-			e.preventDefault();
-			monochrome = !monochrome;
-			break;
+function togglePaused() {
+	// The game must be running to be pausable.
+	if (!running) return;
+
+	if (paused)
+		gameLoop = setInterval(run, updateInterval);
+	else
+		clearInterval(gameLoop);
+	paused = !paused;
+}
+
+// This function handles all the game logic. It updates the tetromino's
+// position and checks for collisions.
+function update() {
+	if (paused || !running)
+		return false;
+
+	if (canLand(curTet, x, y, r)) {
+		landTetromino(curTet, x, y, r);
+
+		var completeLines = getCompleteLines();
+		if (completeLines.length > 0) {
+			lineClears += getLineClears(completeLines.length);
+			score += getLinesScore(completeLines.length, level);
+
+			var newLevel = getLevel(lineClears);
+			if (newLevel != level) {
+				level = newLevel;
+				clearInterval(gameLoop);
+				gameLoop = setInterval(run, updateInterval / level);
+			}
+
+			deleteLines(completeLines);
+		}
+
+		if (!canSpawn(nextTet, xNext, yNext, 0)) {
+			running = false;
+			return false;
+		}
+
+		curTet = nextTet;
+		x = xNext;
+		y = yNext;
+		r = 0;
+
+		var newTet = getNewRandomTetromino();
+		nextTet = newTet[0];
+		xNext = newTet[1];
+		yNext = newTet[2];
+		return false;
+	} else {
+		y++;
+		return true;
 	}
-	draw();
 }
