@@ -17,28 +17,26 @@
 			}
 			#footer {
 				font: 8pt Tahoma;
-				color: grey;
+				color: gray;
 				text-align: center;
 				margin-top: 4px;
 			}
 			#game {
 				position: relative;
 			}
-			#nexttetrocanvas {
-			}
-			#maincanvas {
-				border: 1px dotted gray;
+			#landedCanvas, #activeCanvas {
+				border: 1px solid gray;
 			}
 		</style>
 	</head>
 	<body>
-		<div id="header">JavaScriptris v0.2.2</div>
+		<div id="header">JavaScriptris v0.3</div>
 		<div id="game">
-			<canvas id="maincanvas">
+			<canvas id="landedCanvas">
 				Your browser does not support the HTML5 'canvas' element!
 			</canvas>
-			<canvas id="nexttetrocanvas"></canvas>
-			<div style="clear: both"></div>
+			<canvas id="activeCanvas"></canvas>
+			<canvas id="nextCanvas"></canvas>
 		</div>
 		<div id="footer">
 			Controls:<br>
