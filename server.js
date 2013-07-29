@@ -21,7 +21,8 @@ MessageType = {
     ScoreMessage : 11,
     LevelMessage : 12,
     PauseMessage : 13,
-    BattleMessage : 14
+    BattleMessage : 14,
+    HotLinesMessage : 15
 }
 
 //  Start express server.

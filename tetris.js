@@ -227,7 +227,9 @@ function lockCurrent() {
 }
 
 function checkRowsCompleted() {
-    var n = 0; // number of deleted rows
+    var n = 0; // number of deleted rows.
+    var deletedRows = []; //  positions of deleted rows.
+
     for (var i = 0; i < height; i++) {
         var complete = true;
         for (var j = 0; j < width; j++) {
@@ -241,6 +243,7 @@ function checkRowsCompleted() {
             blocks.splice(i, 1);
             blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]); // not too elegant...
             n++;
+            deletedRows.push(i);
 
             socket.emit('gameMessage', {type: MessageType.DeleteRowMessage, row: i});
         }
@@ -250,7 +253,7 @@ function checkRowsCompleted() {
     if (n > 0) {
 
         // Cleared some lines!
-        addClearedLines(true,n);
+        addClearedLines(true,n,deletedRows,gameType);
 
         score += rowScores[n-1] * (level + 1);
 
@@ -272,9 +275,6 @@ function checkRowsCompleted() {
 }
 
 function gameOver() {
-    clearInterval(gameLoop);
-    state = GameState.Gameover;
-
     emitGameover();
 }
 
@@ -322,8 +322,7 @@ function update() {
     }
     y++;
     
-    // Check rules depending on game type.
-    checkGameTypeRules();
+    gameTypeUpdate(gameType);
     return false;
 }
 
@@ -354,6 +353,9 @@ function drawScoreAndLevel(player) {
 function draw() {
 	clearCanvases(P1);
     clearCanvases(P2);
+
+    if (state == GameState.Running)
+    	gameTypeDraw(gameType);
 
 	mainContext[P1].fillStyle = 'black';
     mainContext[P2].fillStyle = 'black';

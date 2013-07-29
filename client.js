@@ -5,14 +5,6 @@ var userid = '';
 var maxPauses = 2;
 var curPauses = 0;
 
-var maxTime = 100;
-var curTime = 0;
-var timer;
-
-var clearedLines = 0;
-var strangerClearedLines = 0;
-var maxClearedLines = 10;
-
 var wins = 0;
 var strangerWins = 0;
 
@@ -31,14 +23,16 @@ MessageType = {
     ScoreMessage : 11,
     LevelMessage : 12,
     PauseMessage : 13,
-    BattleMessage : 14
+    BattleMessage : 14,
+    HotLinesMessage : 15
 }
 
 GameType = {
 	None : 0,
     Endless : 1,
     TimeLimit : 2,
-    Battle : 3
+    Battle : 3,
+    HotLines : 4
 }
 
 var readyType = GameType.None;
@@ -49,30 +43,27 @@ var gameType = GameType.None;
 function emitGameover() {
     addMessage('STRANGER WON!','System');
 
-    // Reset variables.
-    readyType = GameType.None;
-    strangerReadyType = GameType.None;
-
-	clearedLines = 0;
-	strangerClearedLines = 0;
-
-    // Increase stranger wins reset pauses and timers.
-    curPauses = 0;
-    document.getElementById('pauseCount').innerHTML = 'p = pause (' + maxPauses + ' left)';
-
-    strangerWins++;
-    document.getElementById('scoreCount').innerHTML = wins + ' - ' + strangerWins;
-
-    curTime = 0;
-    document.getElementById('timeCount').innerHTML = '';
-    clearInterval(timer);
-
-    // Re-enable ready button.
-    document.getElementById('readyButton').disabled = false; 
-
     // Reset update intervals to start value.
     updateInterval = startingUpdateInterval;
     updateIntervalP2 = startingUpdateInterval;
+
+    gameTypeDraw(gameType);
+    gameTypeReset(gameType);
+
+    // Increase wins, reset pauses and timers.
+    curPauses = 0;
+    strangerWins++;
+    setLobbyTexts();
+
+    // Enable lobby buttons.
+    setLobbyButtonsEnabled(true);
+
+    clearInterval(gameLoop);
+    clearInterval(timer);
+
+    state = GameState.Gameover;
+    readyType = GameType.None;
+    strangerReadyType = GameType.None;
 
     socket.emit('lobbyMessage', {type: MessageType.GameoverMessage, id: userid});
 }
@@ -84,126 +75,11 @@ function emitPauseToggle() {
 
             // Increase local pauses.
             curPauses++;
-            document.getElementById('pauseCount').innerHTML = 'p = pause (' + (maxPauses - curPauses) + ' left)';
+            setLobbyTexts();
         }
     } else if (state == GameState.Paused) {
         socket.emit('lobbyMessage', {type: MessageType.PauseMessage, action: 'unpause', id: userid})
     }
-}
-
-function checkGameTypeRules() {
-	switch (readyType) {
-		case GameType.Endless:
-			// No special rules...
-			break;
-
-		case GameType.TimeLimit:
-			// If time is up...
-			if (curTime >= maxTime) {
-				clearInterval(timer);
-
-				document.getElementById('timeCount').innerHTML = 'Time up!';
-				if (score < scoreP2) {
-					// Stranger wins, emit gameover.
-					clearInterval(gameLoop);
-    				state = GameState.Gameover;
-
-					emitGameover();
-				} else if (score == scoreP2) {
-					// Same score.
-					addMessage('Dead heat!','System');
-
-					// Reset some variables and wait.
-				    state = GameState.Waiting;
-				    readyType = GameType.None;
-				    strangerReadyType = GameType.None;
-				    gameType = GameType.None;
-				    curPauses = 0;
-				    curTime = 0;
-
-                    // Re-enable ready button.
-                    document.getElementById('readyButton').disabled = false; 
-
-				    document.getElementById('pauseCount').innerHTML = 'p = pause (' + maxPauses + ' left)';
-					document.getElementById('timeCount').innerHTML = '';
-				}
-			}
-			break;
-
-		case GameType.Battle:
-			// If stranger wins...
-			if (strangerClearedLines >= maxClearedLines) {
-				drawBattleMeter();
-
-				// ... emit gameover.
-				clearInterval(gameLoop);
-    			state = GameState.Gameover;
-				emitGameover();
-			}
-
-			break;
-	}
-}
-
-function addClearedLines(ownLines,lines) {
-	if (ownLines) {
-		clearedLines+=lines;
-
-		// If meters meet from own cleared line, then reduce stranger's meter.
-		if (clearedLines + strangerClearedLines > maxClearedLines) {
-			strangerClearedLines-=lines;
-
-			// Emit new cleared line number to stranger.
-			socket.emit('gameMessage',{type: MessageType.BattleMessage, id: userid, lines:strangerClearedLines});
-		}
-	} else {
-		strangerClearedLines+=lines;
-
-		// If meters meet from stranger cleared line, then reduce own meter.
-		if (clearedLines + strangerClearedLines > maxClearedLines) {
-			clearedLines-=lines;
-		}
-	}
-
-    if (gameType == GameType.Battle) {
-        // Updated values => draw new battle meter.
-        drawBattleMeter();     
-    }
-}
-
-function drawBattleMeter() {
-	// Locate and clear battle meter canvas.
-	var canvas = document.getElementById('battleMeter');
-	var context = canvas.getContext('2d');
-
-    // Clear and display the canvas.
-	canvas.width = canvas.width;
-    canvas.style.display = 'block';
-
-	// Draw own cleared lines.
-	context.fillStyle = 'rgba(0, 255, 0, 0.3)';
-	context.fillRect(0, 0, (canvas.width/maxClearedLines) * clearedLines, canvas.height);
-
-	// Draw stranger cleared lines.
-	context.fillStyle = 'rgba(255, 0, 0, 0.3)';
-	context.fillRect(canvas.width - ((canvas.width/maxClearedLines) * strangerClearedLines), 0,
-	   (canvas.width/maxClearedLines) * strangerClearedLines,canvas.height);
-}
-
-// Update ingame timer.
-function updateTimer() {
-	curTime++;
-
-	// Update time text if in TimeLimit mode.
-	if (gameType == GameType.TimeLimit) {
-		document.getElementById('timeCount').innerHTML = (maxTime - curTime) + ' sec left!';
-
-		// Set text color.
-		if (curTime >= (maxTime - 10))
-			document.getElementById('timeCount').style.color = 'red';
-		else
-			document.getElementById('timeCount').style.color = 'grey';
-	}
 }
 
 socket.on('connected', function(data) {
@@ -216,8 +92,7 @@ socket.on('connected', function(data) {
     draw();
 
     // Disable lobby buttons.
-    document.getElementById('sendButton').disabled = true; 
-    document.getElementById('readyButton').disabled = true; 
+    setLobbyButtonsEnabled(false);
 });
 
 socket.on('playerCountMessage', function(data){
@@ -229,8 +104,7 @@ socket.on('foundPlayer', function(data) {
     addMessage('Found another player!','System');
 
     // Enable lobby buttons.
-    document.getElementById('sendButton').disabled = false; 
-    document.getElementById('readyButton').disabled = false; 
+    setLobbyButtonsEnabled(true);
 });
 
 socket.on('playerDisconnect', function(data) {
@@ -241,28 +115,25 @@ socket.on('playerDisconnect', function(data) {
 
     // Wait and reset variables.
     state = GameState.Waiting;
+
     readyType = GameType.None;
     strangerReadyType = GameType.None;
     gameType = GameType.None;
+
     curPauses = 0;
     wins = 0;
     strangerWins = 0;
-    curTime = 0;
-    clearedLines = 0;
-	strangerClearedLines = 0;
+
+    // Reset everything.
+    gameTypeResetAll();
+    gameTypeDraw(gameType);
+    resetLobby();
+
 	updateInterval = startingUpdateInterval;
 	updateIntervalP2 = startingUpdateInterval;
 
     // Clear stuff.
     newGame();
-
-    // Disable lobby buttons and set texts.
-    document.getElementById('sendButton').disabled = true; 
-    document.getElementById('readyButton').disabled = true; 
-
-    document.getElementById('scoreCount').innerHTML = '0 - 0';
-    document.getElementById('pauseCount').innerHTML = 'p = pause (' + maxPauses + ' left)';
-    document.getElementById('timeCount').innerHTML = '';
 });
 
 // On recieving lobbyMessages
@@ -276,35 +147,26 @@ socket.on('lobbyMessage', function(data) {
         case MessageType.GameoverMessage:
             addMessage('YOU WON!','System');
 
-            if (gameType == GameType.Battle) 
-            	drawBattleMeter();
+            // Reset update intervals to start value.
+            updateInterval = startingUpdateInterval;
+            updateIntervalP2 = startingUpdateInterval;
+
+            // Reset game type variables.
+            gameTypeReset(gameType);
 
             // Increase wins, reset pauses and timers.
             wins++;
-            document.getElementById('scoreCount').innerHTML = wins + ' - ' + strangerWins;
-
             curPauses = 0;
-            document.getElementById('pauseCount').innerHTML = 'p = pause (' + maxPauses + ' left)';
+            clearInterval(timer);
+            setLobbyTexts();
 
-        	curTime = 0;
-        	document.getElementById('timeCount').innerHTML = '';
-        	clearInterval(timer);
-
-        	// Reset variables
-        	clearedLines = 0;
-    		strangerClearedLines = 0;
+            // Enable lobby buttons.
+            setLobbyButtonsEnabled(true);
 
             state = GameState.Gamewon;
             gameType = GameType.None;
             readyType = GameType.None;
             strangerReadyType = GameType.None;
-
-            // Re-enable ready button.
-            document.getElementById('readyButton').disabled = false; 
-
-            // Reset update intervals to start value.
-    	    updateInterval = startingUpdateInterval;
-    	    updateIntervalP2 = startingUpdateInterval;
             break;
 
         case MessageType.StartMessage:
@@ -312,29 +174,15 @@ socket.on('lobbyMessage', function(data) {
             
             gameType = data.gameType;
 
-            // Set game type starting conditions.
-            switch (gameType) {
-                case GameType.Battle:
-                    // Draw empty battle meter.
-                    drawBattleMeter();
-                    break;
-
-                case GameType.TimeLimit:
-                case GameType.Endless:
-                    // Set the battle meter to hidden.
-                    document.getElementById('battleMeter').style.display = 'none';
-                    break;
-            }
-
-            // Not waiting anymore, start game.
-            state = GameState.Running;
-            newGame();
-
             // Disable ready button.
             document.getElementById('readyButton').disabled = true; 
 
-            // Start game timer.
-            timer = setInterval(updateTimer,1000);
+            // Set game type starting conditions.
+            gameTypeStart(gameType);
+    
+            // Not waiting anymore, start game.
+            state = GameState.Running;
+            newGame();
 
             socket.emit('newTetromino', {current: curTet, next: nextTet, rotation: r, x: x, y: y});
             break;
@@ -416,7 +264,8 @@ socket.on('gameMessage', function(data) {
         blocksP2.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
 
         // Stranger cleared a line...
-        addClearedLines(false,1);
+        addClearedLines(false,1,[data.row],gameType);
+
         break;
     case MessageType.ScoreMessage:
         scoreP2 = data.score;
@@ -432,6 +281,9 @@ socket.on('gameMessage', function(data) {
     case MessageType.BattleMessage:
     	clearedLines = data.lines;
     	break;
+    case MessageType.HotLinesMessage:
+        strangerHotLines = data.hotlines;
+        break;    
     }
     draw();
 });

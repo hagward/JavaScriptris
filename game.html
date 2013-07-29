@@ -43,9 +43,10 @@
             <div id="buttonContainer">
                 <select id="modeSelection">
                     <option>--Select a game mode!--</option>
-                    <option>Endless</option>
-                    <option>Time attack</option>
-                    <option>Battle</option>
+                    <option title="Classic tetris!">Endless</option>
+                    <option title="Get most points in 100 seconds!">Time attack</option>
+                    <option title="Clear lines and push the other players meter!">Battle</option>
+                    <option title="Clear all gray lines to win!">Hot lines</option>
                 </select>
                 <button id="readyButton" type="button" onclick="sendReady();">I'm ready!</button>
                 <button id="sendButton" type="button" onclick="sendMessage();">Send</button>
@@ -55,6 +56,7 @@
         <script src="/socket.io/socket.io.js"></script>
         <script src="tetris.js"></script>
         <script src="client.js"></script>
+        <script src="gametypes.js"></script>
         <script src="lobby.js"></script>
     </body>
 </html>

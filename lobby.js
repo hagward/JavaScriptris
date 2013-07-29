@@ -30,6 +30,28 @@ function keyPress(e) {
 		document.getElementById('sendButton').click();
 }
 
+// Disable lobby buttons and set texts.
+function resetLobby() {
+	setLobbyButtonsEnabled(false);
+    setLobbyTexts();
+}
+
+// Set all lobby texts.
+function setLobbyTexts() {
+	document.getElementById('scoreCount').innerHTML = wins + ' - ' + strangerWins;
+	document.getElementById('pauseCount').innerHTML = 'p = pause (' + (maxPauses - curPauses) + ' left)';
+
+	if (curTime == 0)
+    	document.getElementById('timeCount').innerHTML = '';
+    else 
+    	document.getElementById('timeCount').innerHTML = (maxTime - curTime) + ' sec left!';
+}
+
+function setLobbyButtonsEnabled(enabled) {
+	document.getElementById('sendButton').disabled = !enabled; 
+    document.getElementById('readyButton').disabled = !enabled; 
+}
+
 // Get index of selected item of the modeSelection dropdown box.
 function getSelectedGameType() {
  	var dropdown = document.getElementById("modeSelection");
