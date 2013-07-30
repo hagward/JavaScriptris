@@ -1,6 +1,6 @@
-﻿/**
- * JavaScriptris v0.2.2 by Anders Hagward
- * Date: 2013-07-14
+/**
+ * JavaScriptris v0.3 by Anders Hagward
+ * Date: 2013-07-30
  *
  * The challenge was: how long time will it take to write a Tetris clone
  * stranded on a desolate island with only a laptop and an old smartphone,
@@ -490,7 +490,7 @@ function update() {
 			g_scoreSpan.innerHTML = g_score;
 
 			var newLevel = getLevel(g_lineClears);
-			if (newLevel != g_level) {
+			if (newLevel > g_level && newLevel <= g_maxlevel) {
 				g_level = newLevel;
 				clearInterval(g_gameLoop);
 				g_gameLoop = setInterval(run, g_updateInterval / g_level);
