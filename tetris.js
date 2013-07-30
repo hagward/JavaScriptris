@@ -25,8 +25,6 @@ var g_ghostOpacity = '0.2';
 
 var g_lineClearsPerAction = [1, 3, 5, 8];
 
-var g_monochrome = false;
-
 // Determines whether to show the moving tetromino or not.
 var g_running = true;
 var g_paused = false;
@@ -37,6 +35,9 @@ var g_canvasNext = document.getElementById('nextCanvas');
 var g_contextLanded = g_canvasLanded.getContext('2d');
 var g_contextActive = g_canvasActive.getContext('2d');
 var g_contextNext = g_canvasNext.getContext('2d');
+
+var g_scoreSpan = document.getElementById('score');
+var g_levelSpan = document.getElementById('level');
 
 // Block size.
 var g_bsize = 30;
@@ -57,6 +58,7 @@ g_canvasLanded.style.marginLeft = '-' + (g_canvasLanded.width / 2) + 'px';
 g_canvasActive.style.marginLeft = g_canvasLanded.style.marginLeft;
 g_canvasNext.style.marginLeft = '-' + (g_canvasLanded.width) + 'px';
 document.getElementById('game').style.height = g_canvasLanded.height + 'px';
+document.getElementById('scoreLevelContainer').style.width = g_canvasLanded.width + 'px';
 
 var g_colors = [
 	'rgba(51, 204, 204, 1.0)',	// cyan
@@ -115,6 +117,8 @@ newGame();
  */
 document.onkeydown = function(e) {
 	var keyCode = e.keyCode || e.which;
+	if (g_paused && keyCode != 80)
+		return;
 	switch (keyCode) {
 		case 37: // left
 			e.preventDefault();
@@ -123,8 +127,11 @@ document.onkeydown = function(e) {
 			break;
 		case 38: // up
 			e.preventDefault();
-			if (canRotate(g_curTet, g_x, g_y, g_r))
-				g_r = (g_r + 1) % g_tetros[g_curTet].length;
+			var newRot = -1;
+			while ((newRot = canRotate(g_curTet, g_x, g_y, g_r)) == -2)
+				g_y++;
+			if (newRot != -1)
+				g_r = newRot;
 			break;
 		case 39: // right
 			e.preventDefault();
@@ -147,12 +154,9 @@ document.onkeydown = function(e) {
 			e.preventDefault();
 			newGame();
 			break;
-		case 77: // 'm'
-			e.preventDefault();
-			g_monochrome = !g_monochrome;
-			break;
 	}
-	drawActive(true);
+	if (g_running && !g_paused)
+		drawActive(true);
 }
 
 function canLand(tetro, x, y, rot) {
@@ -186,13 +190,15 @@ function canMoveRight(tetro, x, y, rot) {
 function canRotate(tetro, x, y, rot) {
 	var newRot = (rot + 1) % g_tetros[tetro].length;
 	for (var i = 0; i < 4; i++) {
-		var newX = x + g_tetros[tetro][newRot][i][0];
 		var newY = y + g_tetros[tetro][newRot][i][1];
-		if (newX < 0 || newX >= g_width || newY < 0 || newY >= g_height
+		if (newY < 0)
+			return -2;
+		var newX = x + g_tetros[tetro][newRot][i][0];
+		if (newX < 0 || newX >= g_width || newY >= g_height
 				|| g_blocks[newY][newX] > -1)
-			return false;
+			return -1;
 	}
-	return true;
+	return newRot;
 }
 
 function canSpawn(tetro, x, y, rot) {
@@ -214,57 +220,59 @@ function deleteLines(lines) {
 	}
 }
 
+function drawActive(ghost) {
+	g_canvasActive.width = g_canvasActive.width;
+	g_contextActive.fillStyle = g_colors[g_curTet];
+
+	g_contextActive.beginPath();
+	for (var i = 0; i < 4; i++) {
+		// Draw the current moving tetromino.
+		g_contextActive.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
+								 (g_y + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
+								 g_bsize, g_bsize);
+
+		// Draw outline.
+		g_contextActive.rect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
+							 (g_y + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
+							 g_bsize, g_bsize);
+	}
+	g_contextActive.stroke();
+
+	if (ghost) {
+		var ghostY = getGhostYPosition(g_curTet, g_x, g_y, g_r);
+		g_contextActive.fillStyle = g_ghostColors[g_curTet];
+		for (var i = 0; i < 4; i++)
+			g_contextActive.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
+		        					 (ghostY + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
+		        					 g_bsize, g_bsize);
+	}
+}
+
 function drawLanded() {
 	g_canvasLanded.width = g_canvasLanded.width;
-	if (g_monochrome) g_contextLanded.fillStyle = 'black';
 
 	g_contextLanded.beginPath();
 	for (var i = 0; i < g_height; i++) {
 		for (var j = 0; j < g_width; j++) {
 			if (g_blocks[i][j] > -1) {
-				if (!g_monochrome) g_contextLanded.fillStyle = g_colors[g_blocks[i][j]];
-				g_contextLanded.fillRect(j * g_bsize, i * g_bsize, g_bsize, g_bsize);
+				g_contextLanded.fillStyle = g_colors[g_blocks[i][j]];
+				
+				// Draw tetromino.
+				g_contextLanded.fillRect(j * g_bsize, i * g_bsize,
+										 g_bsize, g_bsize);
 
 				// Draw outline.
-				g_contextLanded.rect(j * g_bsize, i * g_bsize, g_bsize, g_bsize);
+				g_contextLanded.rect(j * g_bsize, i * g_bsize,
+									 g_bsize, g_bsize);
 			}
 		}
 	}
 	g_contextLanded.stroke();
 }
 
-function drawActive(ghost) {
-	g_canvasActive.width = g_canvasActive.width;
-	g_contextActive.fillStyle = (g_monochrome) ? 'black' : g_colors[g_curTet];
-
-	g_contextActive.beginPath();
-	for (var i = 0; i < 4; i++) {
-		// Draw the current moving tetromino.
-		g_contextActive.fillRect((g_x+g_tetros[g_curTet][g_r][i][0])*g_bsize,
-				(g_y+g_tetros[g_curTet][g_r][i][1])*g_bsize,
-				g_bsize, g_bsize);
-
-		// Draw outline.
-		g_contextActive.rect((g_x+g_tetros[g_curTet][g_r][i][0])*g_bsize,
-				(g_y+g_tetros[g_curTet][g_r][i][1])*g_bsize,
-				g_bsize, g_bsize);
-	}
-	g_contextActive.stroke();
-
-	if (ghost) {
-		var ghostY = getGhostYPosition(g_curTet, g_x, g_y, g_r);
-		g_contextActive.fillStyle = (g_monochrome) ? 'rgba(0, 0, 0, ' + g_ghostOpacity + ')'
-				: g_ghostColors[g_curTet];
-		for (var i = 0; i < 4; i++)
-			g_contextActive.fillRect((g_x+g_tetros[g_curTet][g_r][i][0])*g_bsize,
-	        	(ghostY+g_tetros[g_curTet][g_r][i][1])*g_bsize,
-	        	g_bsize, g_bsize);
-	}
-}
-
 function drawNext() {
 	g_canvasNext.width = g_canvasNext.width;
-	g_contextNext.fillStyle = (g_monochrome) ? 'black' : g_colors[g_nextTet];
+	g_contextNext.fillStyle = g_colors[g_nextTet];
 
 	// Draw the next tetromino in the center of its canvas.
 	var nextTetX = (g_nextTet == 0) ? g_bsize : 2 * g_bsize;
@@ -272,83 +280,34 @@ function drawNext() {
 	g_contextNext.beginPath();
 	for (var i = 0; i < 4; i++) {
 		// Draw tetromino.
-		g_contextNext.fillRect(nextTetX + g_tetros[g_nextTet][0][i][0]*g_bsize,
-				nextTetY + g_tetros[g_nextTet][0][i][1]*g_bsize,
-				g_bsize, g_bsize);
+		g_contextNext.fillRect(nextTetX + g_tetros[g_nextTet][0][i][0] * g_bsize,
+							   nextTetY + g_tetros[g_nextTet][0][i][1] * g_bsize,
+							   g_bsize, g_bsize);
 
 		// Draw outline.
-		g_contextNext.rect(nextTetX + g_tetros[g_nextTet][0][i][0]*g_bsize,
-				nextTetY + g_tetros[g_nextTet][0][i][1]*g_bsize,
-				g_bsize, g_bsize);
+		g_contextNext.rect(nextTetX + g_tetros[g_nextTet][0][i][0] * g_bsize,
+						   nextTetY + g_tetros[g_nextTet][0][i][1] * g_bsize,
+						   g_bsize, g_bsize);
 	}
 	g_contextNext.stroke();
 }
 
-		
+function drawOverlay(colorBg, colorFg, text) {
+	g_contextActive.fillStyle = colorBg;
+	g_contextActive.fillRect(0, 0, g_canvasActive.width,
+							 g_canvasActive.height);
+	g_contextActive.fillStyle = colorFg;
+	g_contextActive.font = 'bold 30pt Tahoma';
+	g_contextActive.textAlign = 'center';
+	g_contextActive.fillText(text, g_canvasActive.width / 2,
+							 g_canvasActive.height / 2);
+}
 
-		// Draw outlines.
-		// g_contextLanded.rect((x+g_tetros[g_curTet][g_r][i][0])*g_bsize,
-		// 		(y+g_tetros[g_curTet][g_r][i][1])*g_bsize,
-		// 		g_bsize, g_bsize);
-		// g_contextNext.rect(g_nextTetX + g_tetros[g_nextTet][0][i][0]*g_bsize,
-		// 		g_nextTetY + g_tetros[g_nextTet][0][i][1]*g_bsize,
-		// 		g_bsize, g_bsize);
-		// g_contextLanded.stroke();
-		// g_contextNext.stroke();
-
-// function draw() {
-	// if (g_running) {
-	// 	if (!g_monochrome) g_contextLanded.fillStyle = g_colors[g_curTet];
-	// 	if (!g_monochrome) g_contextNext.fillStyle = g_colors[g_nextTet];
-	// 	for (var i = 0; i < 4; i++) {
-	// 		// Draw the current moving tetromino.
-	// 		g_contextLanded.fillRect((g_x+g_tetros[g_curTet][g_r][i][0])*g_bsize,
-	// 				(g_y+g_tetros[g_curTet][g_r][i][1])*g_bsize,
-	// 				g_bsize, g_bsize);
-
-	// 		// Draw the next tetromino in the center of its canvas.
-	// 		var g_nextTetX = (g_nextTet == 0) ? g_bsize : 2 * g_bsize;
-	// 		var g_nextTetY = (g_nextTet == 5 || g_nextTet == 6) ? g_bsize : 2 * g_bsize;
-	// 		g_contextNext.fillRect(g_nextTetX + g_tetros[g_nextTet][0][i][0]*g_bsize,
-	// 				g_nextTetY + g_tetros[g_nextTet][0][i][1]*g_bsize,
-	// 				g_bsize, g_bsize);
-
-			// Draw outlines.
-			// g_contextLanded.rect((x+g_tetros[g_curTet][g_r][i][0])*g_bsize,
-			// 		(y+g_tetros[g_curTet][g_r][i][1])*g_bsize,
-			// 		g_bsize, g_bsize);
-			// g_contextNext.rect(g_nextTetX + g_tetros[g_nextTet][0][i][0]*g_bsize,
-			// 		g_nextTetY + g_tetros[g_nextTet][0][i][1]*g_bsize,
-			// 		g_bsize, g_bsize);
-			// g_contextLanded.stroke();
-			// g_contextNext.stroke();
-		// }
-
-		// Draw the ghost tetromino.
-		
-// 	} else {
-// 		// Game over.
-// 		g_contextLanded.fillStyle = (g_monochrome) ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
-// 		g_contextLanded.fillRect(0, 0, g_canvasLanded.width, g_canvasLanded.height);
-// 		g_contextLanded.fillStyle = 'white';
-// 		g_contextLanded.font = 'bold 30pt Tahoma';
-// 		g_contextLanded.fillText('GAME OVER', 30, 240);
-// 	}
-	
-// 	if (g_paused) {
-// 		g_contextLanded.fillStyle = (g_monochrome) ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 255, 0.3)';
-// 		g_contextLanded.fillRect(0, 0, g_canvasLanded.width, g_canvasLanded.height);
-// 		g_contextLanded.fillStyle = 'white';
-// 		g_contextLanded.font = 'bold 30pt Tahoma';
-// 		g_contextLanded.fillText('PAUSED', 70, 240);
-// 	}
-
-// 	// Draw the score and level.
-// 	g_contextLanded.fillStyle = 'black';
-// 	g_contextLanded.font = 'bold 10pt Tahoma';
-// 	g_contextLanded.fillText('Score: ' + g_score, 8, 18);
-// 	g_contextLanded.fillText('Level: ' + g_level, g_canvasLanded.width-60, 18);
-// }
+function gameOver() {
+	clearInterval(g_gameLoop);
+	g_running = false;
+	drawOverlay('rgba(255, 0, 0, 0.3)', 'white', 'GAME OVER');
+}
 
 /**
  * Returns a list containing the indices of the complete rows.
@@ -461,7 +420,11 @@ function newGame() {
 	// Need to draw before first update for the first tetromino to appear at the
 	// very top.
 	drawActive(true);
+	drawLanded();
 	drawNext();
+
+	g_scoreSpan.innerHTML = g_score;
+	g_levelSpan.innerHTML = g_level;
 }
 
 /**
@@ -483,6 +446,10 @@ function resetAllBlocks() {
 
 function run() {
 	update();
+
+	if (g_paused || !g_running)
+		return;
+
 	drawActive(true);
 	drawNext();
 }
@@ -491,11 +458,20 @@ function togglePaused() {
 	// The game must be g_running to be pausable.
 	if (!g_running) return;
 
-	if (g_paused)
-		gameLoop = setInterval(run, g_updateInterval);
-	else
+	if (g_paused) {
+		g_gameLoop = setInterval(run, g_updateInterval / g_level);
+	} else {
 		clearInterval(g_gameLoop);
+		drawOverlay('rgba(0, 0, 255, 0.3)', 'white', 'PAUSED');
+	}
 	g_paused = !g_paused;
+}
+
+function touchesCeiling(tetro, y, rot) {
+	for (var i = 0; i < 4; i++)
+		if (y + g_tetros[tetro][rot][i][1] < 0)
+			return true;
+	return false;
 }
 
 // This function handles all the game logic. It updates the tetromino's
@@ -511,19 +487,21 @@ function update() {
 		if (completeLines.length > 0) {
 			g_lineClears += getLineClears(completeLines.length);
 			g_score += getLinesScore(completeLines.length, g_level);
+			g_scoreSpan.innerHTML = g_score;
 
 			var newLevel = getLevel(g_lineClears);
 			if (newLevel != g_level) {
 				g_level = newLevel;
 				clearInterval(g_gameLoop);
 				g_gameLoop = setInterval(run, g_updateInterval / g_level);
+				g_levelSpan.innerHTML = g_level;
 			}
 
 			deleteLines(completeLines);
 		}
 
 		if (!canSpawn(g_nextTet, g_xNext, g_yNext, 0)) {
-			g_running = false;
+			gameOver();
 			return false;
 		}
 

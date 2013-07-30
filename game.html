@@ -1,22 +1,30 @@
-﻿<!DOCTYPE html>
+﻿<!--
+	JavaScriptris v0.3, by Anders Hagward
+	Date: 2013-07-30
+-->
+
+<!DOCTYPE html>
 <html>
 	<head>
 		<meta charset="UTF-8">
 		<title>JavaScriptris</title>
 		<link rel="shortcut icon" href="./favicon.ico">
 		<style>
+			body {
+				font: 1em "Segoe UI", Tahoma, sans-serif;
+			}
 			canvas {
 				display: block;
 				position: absolute;
 				left: 50%;
 			}
 			#header {
-				font: 13pt Tahoma;
+				font-size: 1.3em;
 				text-align: center;
-				margin-bottom: 4px;
+				margin-bottom: 10px;
 			}
 			#footer {
-				font: 8pt Tahoma;
+				font-size: 0.7em;
 				color: gray;
 				text-align: center;
 				margin-top: 4px;
@@ -26,6 +34,9 @@
 			}
 			#landedCanvas, #activeCanvas {
 				border: 1px solid gray;
+			}
+			#scoreLevelContainer {
+				margin: 4px auto 10px;
 			}
 		</style>
 	</head>
@@ -38,9 +49,13 @@
 			<canvas id="activeCanvas"></canvas>
 			<canvas id="nextCanvas"></canvas>
 		</div>
+		<div id="scoreLevelContainer">
+			<span style="float: left">Score: <span id="score"></span></span>
+			<span style="float: right">Level: <span id="level"></span></span>
+			<div style="clear: both"></div>
+		</div>
 		<div id="footer">
 			Controls:<br>
-			m = monochrome<br>
 			p = pause<br>
 			r = restart
 		</div>
