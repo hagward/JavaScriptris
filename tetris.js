@@ -18,10 +18,12 @@
  * Enjoy this fun little project!
  */
 
+var g_version = '0.3 beta 2';
+
 var g_updateInterval = 1000;
 
-var g_maxlevel = 10;
-var g_ghostOpacity = '0.2';
+var g_maxlevel = 12;
+var g_ghostOpacity = '0.3';
 
 var g_lineClearsPerAction = [1, 3, 5, 8];
 
@@ -29,11 +31,13 @@ var g_lineClearsPerAction = [1, 3, 5, 8];
 var g_running = true;
 var g_paused = false;
 
-var g_canvasLanded = document.getElementById('landedCanvas');
+var g_ghost = true;
+
 var g_canvasActive = document.getElementById('activeCanvas');
+var g_canvasLanded = document.getElementById('landedCanvas');
 var g_canvasNext = document.getElementById('nextCanvas');
-var g_contextLanded = g_canvasLanded.getContext('2d');
 var g_contextActive = g_canvasActive.getContext('2d');
+var g_contextLanded = g_canvasLanded.getContext('2d');
 var g_contextNext = g_canvasNext.getContext('2d');
 
 var g_scoreSpan = document.getElementById('score');
@@ -46,16 +50,18 @@ var g_bsize = 30;
 var g_width = 10;
 var g_height = 20;
 
-g_canvasLanded.width = g_width * g_bsize;
-g_canvasLanded.height = g_height * g_bsize;
-g_canvasActive.width = g_canvasLanded.width;
-g_canvasActive.height = g_canvasLanded.height;
+g_canvasActive.width = g_width * g_bsize;
+g_canvasActive.height = g_height * g_bsize;
+g_canvasLanded.width = g_canvasActive.width;
+g_canvasLanded.height = g_canvasActive.height;
 g_canvasNext.width = g_bsize * 6;
 g_canvasNext.height = g_bsize * 4;
 
+document.getElementById('version').innerHTML = g_version;
+
 // Adjust the position of the canvases.
-g_canvasLanded.style.marginLeft = '-' + (g_canvasLanded.width / 2) + 'px';
-g_canvasActive.style.marginLeft = g_canvasLanded.style.marginLeft;
+g_canvasActive.style.marginLeft = '-' + (g_canvasLanded.width / 2) + 'px';
+g_canvasLanded.style.marginLeft = g_canvasActive.style.marginLeft;
 g_canvasNext.style.marginLeft = '-' + (g_canvasLanded.width) + 'px';
 document.getElementById('game').style.height = g_canvasLanded.height + 'px';
 document.getElementById('scoreLevelContainer').style.width = g_canvasLanded.width + 'px';
@@ -146,6 +152,10 @@ document.onkeydown = function(e) {
 			e.preventDefault();
 			hardDrop();
 			break;
+		case 71: // 'g'
+			e.preventDefault();
+			g_ghost = !g_ghost;
+			break;
 		case 80: // 'p'
 			e.preventDefault();
 			togglePaused();
@@ -156,7 +166,7 @@ document.onkeydown = function(e) {
 			break;
 	}
 	if (g_running && !g_paused)
-		drawActive(true);
+		drawActive(g_canvasActive, g_contextActive, g_ghost);
 }
 
 function canLand(tetro, x, y, rot) {
@@ -187,6 +197,12 @@ function canMoveRight(tetro, x, y, rot) {
 	return true;
 }
 
+/**
+ * Checks if the specified tetromino can rotate or not, and returns
+ *     -2, if it collides with the ceiling,
+ *     -1, if it collides with something else,
+ * otherwise it returns the new rotation.
+ */
 function canRotate(tetro, x, y, rot) {
 	var newRot = (rot + 1) % g_tetros[tetro].length;
 	for (var i = 0; i < 4; i++) {
@@ -201,6 +217,10 @@ function canRotate(tetro, x, y, rot) {
 	return newRot;
 }
 
+/**
+ * Returns true if the specified tetromino has the space to spawn, false
+ * otherwise.
+ */
 function canSpawn(tetro, x, y, rot) {
 	for (var i = 0; i < 4; i++)
 		if (g_blocks[y+g_tetros[tetro][rot][i][1]]
@@ -209,108 +229,133 @@ function canSpawn(tetro, x, y, rot) {
 	return true;
 }
 
+/**
+ * Deletes the lines with indices specified in 'lines'.
+ */
 function deleteLines(lines) {
-	// var newLine = [];
-	// for (var i = 0; i < g_width; i++)
-	// 	newLine.push(-1);
+	// For some unexplainable reason the following code has the effect that
+	// updating a value in the block array will update several values:
+	//     var newLine = [];
+	//     for (var i = 0; i < g_width; i++)
+	// 	       newLine.push(-1);
 
 	for (var i = 0; i < lines.length; i++) {
 		g_blocks.splice(lines[i], 1);
+		// TODO: Make this less hardcoded.
 		g_blocks.unshift([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
 	}
 }
 
-function drawActive(ghost) {
-	g_canvasActive.width = g_canvasActive.width;
-	g_contextActive.fillStyle = g_colors[g_curTet];
+/**
+ * Clears the specified canvas and draws the current active tetromino on the
+ * specified context. If 'ghost' is true, then it will also draw a ghost
+ * tetromino at the ground.
+ */
+function drawActive(canvas, context, ghost) {
+	canvas.width = canvas.width;
+	context.fillStyle = g_colors[g_curTet];
 
-	g_contextActive.beginPath();
+	context.beginPath();
 	for (var i = 0; i < 4; i++) {
 		// Draw the current moving tetromino.
-		g_contextActive.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
+		context.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
 								 (g_y + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
 								 g_bsize, g_bsize);
 
 		// Draw outline.
-		g_contextActive.rect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
+		context.rect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
 							 (g_y + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
 							 g_bsize, g_bsize);
 	}
-	g_contextActive.stroke();
+	context.stroke();
 
 	if (ghost) {
 		var ghostY = getGhostYPosition(g_curTet, g_x, g_y, g_r);
-		g_contextActive.fillStyle = g_ghostColors[g_curTet];
+		context.fillStyle = g_ghostColors[g_curTet];
 		for (var i = 0; i < 4; i++)
-			g_contextActive.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
+			context.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
 		        					 (ghostY + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
 		        					 g_bsize, g_bsize);
 	}
 }
 
-function drawLanded() {
-	g_canvasLanded.width = g_canvasLanded.width;
+/**
+ * Clears the specified canvas and draws the landed tetrominos on the specified
+ * context.
+ */
+function drawLanded(canvas, context) {
+	canvas.width = canvas.width;
 
-	g_contextLanded.beginPath();
+	context.beginPath();
 	for (var i = 0; i < g_height; i++) {
 		for (var j = 0; j < g_width; j++) {
 			if (g_blocks[i][j] > -1) {
-				g_contextLanded.fillStyle = g_colors[g_blocks[i][j]];
+				context.fillStyle = g_colors[g_blocks[i][j]];
 				
 				// Draw tetromino.
-				g_contextLanded.fillRect(j * g_bsize, i * g_bsize,
+				context.fillRect(j * g_bsize, i * g_bsize,
 										 g_bsize, g_bsize);
 
 				// Draw outline.
-				g_contextLanded.rect(j * g_bsize, i * g_bsize,
+				context.rect(j * g_bsize, i * g_bsize,
 									 g_bsize, g_bsize);
 			}
 		}
 	}
-	g_contextLanded.stroke();
+	context.stroke();
 }
 
-function drawNext() {
-	g_canvasNext.width = g_canvasNext.width;
-	g_contextNext.fillStyle = g_colors[g_nextTet];
+/**
+ * Clears the specified canvas and draws the current next tetromino on the
+ * specified context.
+ */
+function drawNext(canvas, context) {
+	canvas.width = canvas.width;
+	context.fillStyle = g_colors[g_nextTet];
 
 	// Draw the next tetromino in the center of its canvas.
 	var nextTetX = (g_nextTet == 0) ? g_bsize : 2 * g_bsize;
 	var nextTetY = (g_nextTet == 5 || g_nextTet == 6) ? g_bsize : 2 * g_bsize;
-	g_contextNext.beginPath();
+	context.beginPath();
 	for (var i = 0; i < 4; i++) {
 		// Draw tetromino.
-		g_contextNext.fillRect(nextTetX + g_tetros[g_nextTet][0][i][0] * g_bsize,
+		context.fillRect(nextTetX + g_tetros[g_nextTet][0][i][0] * g_bsize,
 							   nextTetY + g_tetros[g_nextTet][0][i][1] * g_bsize,
 							   g_bsize, g_bsize);
 
 		// Draw outline.
-		g_contextNext.rect(nextTetX + g_tetros[g_nextTet][0][i][0] * g_bsize,
+		context.rect(nextTetX + g_tetros[g_nextTet][0][i][0] * g_bsize,
 						   nextTetY + g_tetros[g_nextTet][0][i][1] * g_bsize,
 						   g_bsize, g_bsize);
 	}
-	g_contextNext.stroke();
-}
-
-function drawOverlay(colorBg, colorFg, text) {
-	g_contextActive.fillStyle = colorBg;
-	g_contextActive.fillRect(0, 0, g_canvasActive.width,
-							 g_canvasActive.height);
-	g_contextActive.fillStyle = colorFg;
-	g_contextActive.font = 'bold 30pt Tahoma';
-	g_contextActive.textAlign = 'center';
-	g_contextActive.fillText(text, g_canvasActive.width / 2,
-							 g_canvasActive.height / 2);
-}
-
-function gameOver() {
-	clearInterval(g_gameLoop);
-	g_running = false;
-	drawOverlay('rgba(255, 0, 0, 0.3)', 'white', 'GAME OVER');
+	context.stroke();
 }
 
 /**
- * Returns a list containing the indices of the complete rows.
+ * Draws an overlay with the specified background and foreground color, and the
+ * text centered.
+ */
+function drawOverlay(canvas, context, colorBg, colorFg, text) {
+	context.fillStyle = colorBg;
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	context.fillStyle = colorFg;
+	context.font = 'bold 30pt Tahoma';
+	context.textAlign = 'center';
+	context.fillText(text, canvas.width / 2, canvas.height / 2);
+}
+
+/**
+ * Removes the game loop and draws a 'game over' overlay.
+ */
+function gameOver() {
+	clearInterval(g_gameLoop);
+	g_running = false;
+	drawOverlay(g_canvasActive, g_contextActive,
+			    'rgba(255, 0, 0, 0.3)', 'white', 'GAME OVER');
+}
+
+/**
+ * Returns a list containing the indices of the current complete rows.
  */
 function getCompleteLines() {
 	var completeLines = [];
@@ -328,6 +373,9 @@ function getCompleteLines() {
 	return completeLines;
 }
 
+/**
+ * Returns the y position for the ghost tetromino for the specified one.
+ */
 function getGhostYPosition(tetro, x, y, rot) {
     var ghostY = y;
     while (true) {
@@ -342,12 +390,11 @@ function getGhostYPosition(tetro, x, y, rot) {
     }
 }
 
+/**
+ * Returns the level based on the specified number of lines cleared.
+ */
 function getLevel(linesCleared) {
 	return Math.floor(linesCleared / 5) + 1;
-}
-
-function getLineClears(numLines) {
-	return g_lineClearsPerAction[numLines - 1];
 }
 
 /**
@@ -379,13 +426,19 @@ function getNewRandomTetromino() {
 	return [newTet, newX, newY];
 }
 
-// Calls update() until the current tetromino reaches the bottom.
+/**
+ * Immediately moves the current tetromino to the ground by repeatedly calling
+ * update().
+ */
 function hardDrop() {
 	if (g_paused || !g_running)
 		return;
 	while (update());
 }
 
+/**
+ * Adds the blocks of the specified tetromino to the array of landed blocks.
+ */
 function landTetromino(tetro, x, y, rot) {
 	for (var i = 0; i < 4; i++) {
 		var yIns = y + g_tetros[tetro][rot][i][1];
@@ -394,6 +447,10 @@ function landTetromino(tetro, x, y, rot) {
 	}
 }
 
+/**
+ * Resets all game variables, blocks, the game loop, and generates new random
+ * 'current' and 'next' tetrominis.
+ */
 function newGame() {
 	g_level = 1;
 	g_score = 0;
@@ -419,16 +476,16 @@ function newGame() {
 
 	// Need to draw before first update for the first tetromino to appear at the
 	// very top.
-	drawActive(true);
-	drawLanded();
-	drawNext();
+	drawActive(g_canvasActive, g_contextActive, g_ghost);
+	drawLanded(g_canvasLanded, g_contextLanded);
+	drawNext(g_canvasNext, g_contextNext);
 
 	g_scoreSpan.innerHTML = g_score;
 	g_levelSpan.innerHTML = g_level;
 }
 
 /**
- * Clears all g_blocks and resizes the g_blocks array to fit the game dimensions if
+ * Clears all blocks and resizes the g_blocks array to fit the game dimensions if
  * needed.
  */
 function resetAllBlocks() {
@@ -444,38 +501,40 @@ function resetAllBlocks() {
 	}
 }
 
+/**
+ * Updates and draws the game and is called repeatedly by setInterval.
+ */
 function run() {
 	update();
 
 	if (g_paused || !g_running)
 		return;
 
-	drawActive(true);
-	drawNext();
+	drawActive(g_canvasActive, g_contextActive, g_ghost);
+	drawNext(g_canvasNext, g_contextNext);
 }
 
+/**
+ * Toggles if the game is paused or not, and if paused draws a 'paused'
+ * overlay.
+ */
 function togglePaused() {
 	// The game must be g_running to be pausable.
 	if (!g_running) return;
 
 	if (g_paused) {
-		g_gameLoop = setInterval(run, g_updateInterval / g_level);
+		updateUpdateInterval();
 	} else {
 		clearInterval(g_gameLoop);
-		drawOverlay('rgba(0, 0, 255, 0.3)', 'white', 'PAUSED');
+		drawOverlay(g_canvasActive, g_contextActive,
+					'rgba(0, 0, 255, 0.3)', 'white', 'PAUSED');
 	}
 	g_paused = !g_paused;
 }
 
-function touchesCeiling(tetro, y, rot) {
-	for (var i = 0; i < 4; i++)
-		if (y + g_tetros[tetro][rot][i][1] < 0)
-			return true;
-	return false;
-}
-
-// This function handles all the game logic. It updates the tetromino's
-// position and checks for collisions.
+/**
+ * Handles all the game logic; it checks if the current tetromino can land, and if so
+ */
 function update() {
 	if (g_paused || !g_running)
 		return false;
@@ -485,16 +544,17 @@ function update() {
 
 		var completeLines = getCompleteLines();
 		if (completeLines.length > 0) {
-			g_lineClears += getLineClears(completeLines.length);
+			g_lineClears += g_lineClearsPerAction[completeLines.length - 1];
 			g_score += getLinesScore(completeLines.length, g_level);
 			g_scoreSpan.innerHTML = g_score;
 
-			var newLevel = getLevel(g_lineClears);
-			if (newLevel > g_level && newLevel <= g_maxlevel) {
-				g_level = newLevel;
-				clearInterval(g_gameLoop);
-				g_gameLoop = setInterval(run, g_updateInterval / g_level);
-				g_levelSpan.innerHTML = g_level;
+			if (g_level < g_maxlevel) {
+				var newLevel = getLevel(g_lineClears);
+				if (newLevel > g_level) {
+					g_level = newLevel;
+					g_levelSpan.innerHTML = g_level;
+					updateUpdateInterval();
+				}
 			}
 
 			deleteLines(completeLines);
@@ -515,11 +575,19 @@ function update() {
 		g_xNext = newTet[1];
 		g_yNext = newTet[2];
 
-		drawLanded();
-		drawNext();
+		drawLanded(g_canvasLanded, g_contextLanded);
+		drawNext(g_canvasNext, g_contextNext);
 		return false;
 	} else {
 		g_y++;
 		return true;
 	}
+}
+
+/**
+ * Clears the current interval and sets a new one based on the current level.
+ */
+function updateUpdateInterval() {
+	clearInterval(g_gameLoop);
+	g_gameLoop = setInterval(run, g_updateInterval / (0.5 * g_level));
 }
