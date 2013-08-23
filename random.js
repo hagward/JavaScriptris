@@ -1,7 +1,7 @@
 /**
  * These functions are responsible for generating "fair" "random" tetrominos.
  * It is making sure that an 'I' tetromino comes at least every 12th round and
- *  that a maximum of four 'S' and 'Z' tetriminos can be spawned consecutively.
+ * that a maximum of four 'S' and 'Z' tetriminos can be spawned consecutively.
  */
 
 var g_numTetros = [];
@@ -28,10 +28,10 @@ function getRandomTetromino() {
         // Make sure that we at least get one I each 12th time.
         newTetromino = 0;
     } else if (len >= 4
-        && g_prevQueue[len-1] == g_prevQueue[len-2]
-        && g_prevQueue[len-2] == g_prevQueue[len-3]
-        && g_prevQueue[len-3] == g_prevQueue[len-4]
-        && g_prevQueue[len-4] >= 5) {
+        && (g_prevQueue[len-1] == 5 || g_prevQueue[len-1] == 6)
+        && (g_prevQueue[len-2] == 5 || g_prevQueue[len-2] == 6)
+        && (g_prevQueue[len-3] == 5 || g_prevQueue[len-3] == 6)
+        && (g_prevQueue[len-4] == 5 || g_prevQueue[len-4] == 6)) {
         // If the four last tetriminos were 'S' or 'Z', spawn something else.
         newTetromino = Math.floor(Math.random() * 5);
     } else {

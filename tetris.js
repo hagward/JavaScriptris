@@ -1,31 +1,24 @@
 /**
  * JavaScriptris v0.3 by Anders Hagward
- * Date: 2013-06-24
- * Last updated: 2013-08-16
+ * Created on: 2013-06-24
+ * Last updated: 2013-08-23
  *
- * The challenge was: how long time will it take to write a Tetris clone
- * stranded on a desolate island with only a laptop and an old smartphone,
- * equipped with a painfully slow and unreliable mobile internet connection and
- * barely basic JavaScript knowledge? The answer was: two evenings and one
- * morning.
- *
- * At first I used a list containing the locked g_blocks in order to be able to
- * render them more quickly (in contrast to looping through the 10*16 'g_blocks'
- * matrix), but maintaining the list when deleting rows showed to be a bit
- * tricky. I then reckoned that was a completely unnecessary optimization and
- * saved myself from the headache. The score system is from the original Tetris
- * but the level system is completely improvised.
- *
- * Enjoy this fun little project!
+ * Stranded on a desolate island, equipped with merely a laptop, a painfully
+ * slow and unreliable mobile internet connection and scarce JavaScript
+ * knowledge, I started to ponder how long time it would take, and if I even
+ * had the ability, to write a Tetris clone. Two evenings and one morning of
+ * coding later I had found the answer.
  */
 
-var g_version = '0.3 beta 3';
+var g_version = '0.3';
 
 var g_updateInterval = 1000;
 
 var g_maxlevel = 12;
 var g_ghostOpacity = '0.3';
 
+// Specifies how many line clears to be issued per number of lines cleared.
+// (To clarify: "line clears" do not equal the number of cleared lines).
 var g_lineClearsPerAction = [1, 3, 5, 8];
 
 // Determines whether to show the moving tetromino or not.
