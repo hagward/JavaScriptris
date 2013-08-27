@@ -19,6 +19,12 @@
 				position: absolute;
 				left: 50%;
 			}
+			td:first-child {
+				text-align: left;
+			}
+			td:last-child {
+				text-align: right;
+			}
 			#header {
 				font-size: 1.3em;
 				text-align: center;
@@ -39,13 +45,18 @@
 			#scoreLevelContainer {
 				margin: 4px auto 10px;
 			}
+			#combo {
+				visibility: hidden;
+				text-align: center;
+				font-weight: bold;
+			}
 		</style>
 	</head>
 	<body>
 		<div id="header">JavaScriptris v<span id="version"></span></div>
 		<div id="game">
 			<canvas id="landedCanvas">
-				Your browser does not support the HTML5 'canvas' element!
+				Your browser does not support the HTML5 <code>canvas</code> element!
 			</canvas>
 			<canvas id="activeCanvas"></canvas>
 			<canvas id="nextCanvas"></canvas>
@@ -55,11 +66,46 @@
 			<span style="float: right">Level: <span id="level"></span></span>
 			<div style="clear: both"></div>
 		</div>
+		<div id="combo">0</div>
 		<div id="footer">
-			Controls:<br>
-			g = show/hide ghost<br>
-			p = pause<br>
-			r = restart
+			<table style="width: 200px; margin: 0 auto;">
+				<tr>
+					<td>LEFT:</td>
+					<td>move left</td>
+				</tr>
+				<tr>
+					<td>RIGHT:</td>
+					<td>move right</td>
+				</tr>
+				<tr>
+					<td>UP/X:</td>
+					<td>rotate clockwise</td>
+				</tr>
+				<tr>
+					<td>CTRL/Z:</td>
+					<td>rotate anticlockwise</td>
+				</tr>
+				<tr>
+					<td>DOWN:</td>
+					<td>soft drop</td>
+				</tr>
+				<tr>
+					<td>SPACE:</td>
+					<td>hard drop</td>
+				</tr>
+				<tr>
+					<td>G:</td>
+					<td>show/hide ghost</td>
+				</tr>
+				<tr>
+					<td>P:</td>
+					<td>pause</td>
+				</tr>
+				<tr>
+					<td>R:</td>
+					<td>restart</td>
+				</tr>
+			</table>
 		</div>
 		<script src="random.js"></script>
 		<script src="tetris.js" defer></script>

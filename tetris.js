@@ -38,6 +38,7 @@ var g_contextNext = g_canvasNext.getContext('2d');
 
 var g_scoreSpan = document.getElementById('score');
 var g_levelSpan = document.getElementById('level');
+var g_comboDiv = document.getElementById('combo');
 
 // Block size.
 var g_bsize = 30;
@@ -130,9 +131,19 @@ document.onkeydown = function(e) {
                 g_x--;
             break;
         case 38: // up
+        case 88: // 'x'
             e.preventDefault();
             var newRot = -1;
-            while ((newRot = canRotate(g_curTet, g_x, g_y, g_r)) == -2)
+            while ((newRot = canRotate(g_curTet, g_x, g_y, g_r, false)) == -2)
+                g_y++;
+            if (newRot != -1)
+                g_r = newRot;
+            break;
+        case 17: // ctrl
+        case 90: // 'z'
+            e.preventDefault();
+            var newRot = -1;
+            while ((newRot = canRotate(g_curTet, g_x, g_y, g_r, true)) == -2)
                 g_y++;
             if (newRot != -1)
                 g_r = newRot;
@@ -201,8 +212,11 @@ function canMoveRight(tetro, x, y, rot) {
  *     -1, if it collides with something else,
  * otherwise it returns the new rotation.
  */
-function canRotate(tetro, x, y, rot) {
-    var newRot = (rot + 1) % g_tetros[tetro].length;
+function canRotate(tetro, x, y, rot, rotateLeft) {
+    var len = g_tetros[tetro].length;
+    var newRot = (rotateLeft) ? rot + len - 1 : rot + 1;
+    newRot = newRot % len;
+    console.log(newRot);
     for (var i = 0; i < 4; i++) {
         var newY = y + g_tetros[tetro][newRot][i][1];
         if (newY < 0)
@@ -554,6 +568,11 @@ function update() {
 
             g_scoreSpan.innerHTML = g_score;
 
+            if (g_combo > 0) {
+                g_comboDiv.innerHTML = g_combo + 'x combo for ' + '+' + 50 * g_combo + 'p';
+                g_comboDiv.style.visibility = 'visible';
+            }
+
             if (g_level < g_maxlevel) {
                 var newLevel = getLevel(g_lineClears);
                 if (newLevel > g_level) {
@@ -566,6 +585,7 @@ function update() {
             deleteLines(completeLines);
         } else {
             g_combo = -1;
+            g_comboDiv.style.visibility = 'hidden';
         }
 
         if (!canSpawn(g_nextTet, g_xNext, g_yNext, 0)) {
