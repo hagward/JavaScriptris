@@ -1,7 +1,7 @@
 /**
- * JavaScriptris v0.3 by Anders Hagward
+ * JavaScriptris v0.3.1 by Anders Hagward
  * Created on: 2013-06-24
- * Last updated: 2013-08-23
+ * Last updated: 2013-08-27
  *
  * Stranded on a desolate island, equipped with merely a laptop, a painfully
  * slow and unreliable mobile internet connection and scarce JavaScript
@@ -10,7 +10,9 @@
  * coding later I had found the answer.
  */
 
-var g_version = '0.3';
+var g_version = '0.3.1';
+
+var g_useAugmentedRandom = true;
 
 var g_updateInterval = 1000;
 
@@ -87,6 +89,7 @@ var g_r;
 var g_score;
 var g_level;
 var g_lineClears;
+var g_combo;
 
 var g_gameLoop;
 
@@ -404,7 +407,9 @@ function getLinesScore(numLines, level) {
  * [0, 6]), and a new x and y value.
  */
 function getNewRandomTetromino() {
-    var newTet = getRandomTetromino();
+    var newTet = (g_useAugmentedRandom)
+        ? getRandomTetromino()
+        : Math.floor(Math.random() * 7);
 
     // Place the tetromino in the middle or middle-left column, and just below
     // the ceiling.
@@ -450,11 +455,14 @@ function newGame() {
     g_level = 1;
     g_score = 0;
     g_lineClears = 0;
+    g_combo = -1;
     g_running = true;
     g_paused = false;
 
     resetAllBlocks();
-    resetRandomSystem();
+
+    if (g_useAugmentedRandom)
+        resetRandomSystem();
     
     var newTet = getNewRandomTetromino();
     g_curTet = newTet[0];
@@ -540,8 +548,10 @@ function update() {
 
         var completeLines = getCompleteLines();
         if (completeLines.length > 0) {
+            g_combo += 1;
             g_lineClears += g_lineClearsPerAction[completeLines.length - 1];
-            g_score += getLinesScore(completeLines.length, g_level);
+            g_score += getLinesScore(completeLines.length, g_level) + 50 * g_combo;
+
             g_scoreSpan.innerHTML = g_score;
 
             if (g_level < g_maxlevel) {
@@ -554,6 +564,8 @@ function update() {
             }
 
             deleteLines(completeLines);
+        } else {
+            g_combo = -1;
         }
 
         if (!canSpawn(g_nextTet, g_xNext, g_yNext, 0)) {
