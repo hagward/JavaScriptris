@@ -1,3 +1,13 @@
+v0.3, 2013-07-23
+----------------
+  * Larger game window height.
+  * Ghost tetrominos.
+  * Tetriminos always spawn horizontally.
+  * Tetriminos rotate even when they are leaned against the ceiling.
+  * Every brick now has a border.
+  * WASD have been replaced by the arrow keys.
+  * Better performance.
+
 v0.2.2, 2013-07-14
 ----------------
   * Fixed an error (validation error) in game.html.
