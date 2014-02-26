@@ -1,6 +1,6 @@
 /**
- * These functions are responsible for generating "fair" "random" tetrominos.
- * It is making sure that an 'I' tetromino comes at least every 12th round and
+ * These functions are responsible for generating "fair" "random" tetriminos.
+ * It is making sure that an 'I' tetrimino comes at least every 12th round and
  * that a maximum of four 'S' and 'Z' tetriminos can be spawned consecutively.
  */
 
@@ -10,7 +10,7 @@ var g_prevQueue = [];
 resetRandomSystem();
 
 /**
- * Resets the queue and tetromino count array.
+ * Resets the queue and tetrimino count array.
  */
 function resetRandomSystem() {
     g_numTetros = [0, 0, 0, 0, 0, 0, 0];
@@ -18,39 +18,39 @@ function resetRandomSystem() {
 }
 
 /**
- * Returns a new "random" tetromino and updates the queue.
+ * Returns a new "random" tetrimino and updates the queue.
  */
-function getRandomTetromino() {
-    var newTetromino;
+function getRandomTetrimino() {
+    var newtetrimino;
     var len = g_prevQueue.length;
 
     if (g_numTetros[0] == 0 && len == 12) {
         // Make sure that we at least get one I each 12th time.
-        newTetromino = 0;
+        newtetrimino = 0;
     } else if (len >= 4
         && (g_prevQueue[len-1] == 5 || g_prevQueue[len-1] == 6)
         && (g_prevQueue[len-2] == 5 || g_prevQueue[len-2] == 6)
         && (g_prevQueue[len-3] == 5 || g_prevQueue[len-3] == 6)
         && (g_prevQueue[len-4] == 5 || g_prevQueue[len-4] == 6)) {
         // If the four last tetriminos were 'S' or 'Z', spawn something else.
-        newTetromino = Math.floor(Math.random() * 5);
+        newtetrimino = Math.floor(Math.random() * 5);
     } else {
-        newTetromino = Math.floor(Math.random() * 7);
+        newtetrimino = Math.floor(Math.random() * 7);
     }
-    pushTetromino(newTetromino);
-    return newTetromino;
+    pushTetrimino(newtetrimino);
+    return newtetrimino;
 }
 
 /**
- * Pushes a tetromino into the queue and updates g_numTetros to hold the
- * correct number of instances of the tetromino in the queue.
+ * Pushes a tetrimino into the queue and updates g_numTetros to hold the
+ * correct number of instances of the tetrimino in the queue.
  */
-function pushTetromino(tetromino) {
-    g_numTetros[tetromino]++;
+function pushTetrimino(tetrimino) {
+    g_numTetros[tetrimino]++;
     // If the array is larger than 12, we remove the oldest element.
     if (g_prevQueue.length == 12) {
         g_numTetros[g_prevQueue[0]]--;
         g_prevQueue.shift();
     }
-    g_prevQueue.push(tetromino);
+    g_prevQueue.push(tetrimino);
 }
