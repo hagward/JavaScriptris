@@ -45,7 +45,7 @@ var g_bsize = 30;
 
 // Dimensions in #g_blocks.
 var g_width = 10;
-var g_height = 22;
+var g_height = 20;
 
 var g_colors = [
     'rgba(51, 204, 204, 1.0)',  // cyan
@@ -263,10 +263,12 @@ function canRotate(tetro, x, y, rot, rotateLeft) {
  * otherwise.
  */
 function canSpawn(tetro, x, y, rot) {
-    for (var i = 0; i < 4; i++)
-        if (g_blocks[y+g_tetros[tetro][rot][i][1]]
-                  [x+g_tetros[tetro][rot][i][0]] > -1)
+    for (var i = 0; i < 4; i++) {
+        var blockY = y + g_tetros[tetro][rot][i][1];
+        var blockX = x + g_tetros[tetro][rot][i][0];
+        if (g_blocks[blockY][blockX] > -1)
             return false;
+    }
     return true;
 }
 
@@ -298,29 +300,30 @@ function drawActive(canvas, context, ghost) {
 
     context.beginPath();
     for (var i = 0; i < 4; i++) {
+        var blockY = g_y + g_tetros[g_curTet][g_r][i][1];
+
         // Don't draw if above the ceiling.
-        if (g_y + g_tetros[g_curTet][g_r][i][1] < 0)
+        if (blockY < 0)
             continue;
 
+        var blockX = g_x + g_tetros[g_curTet][g_r][i][0];
+
         // Draw the current moving tetrimino.
-        context.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
-                (g_y + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
-                g_bsize, g_bsize);
+        context.fillRect(blockX * g_bsize, blockY * g_bsize, g_bsize, g_bsize);
 
         // Draw outline.
-        context.rect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
-                (g_y + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
-                g_bsize, g_bsize);
+        context.rect(blockX * g_bsize, blockY * g_bsize, g_bsize, g_bsize);
     }
     context.stroke();
 
     if (ghost) {
         var ghostY = getGhostYPosition(g_curTet, g_x, g_y, g_r);
         context.fillStyle = g_ghostColors[g_curTet];
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < 4; i++) {
             context.fillRect((g_x + g_tetros[g_curTet][g_r][i][0]) * g_bsize,
                     (ghostY + g_tetros[g_curTet][g_r][i][1]) * g_bsize,
                     g_bsize, g_bsize);
+        }
     }
 }
 
