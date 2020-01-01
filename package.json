@@ -7,7 +7,7 @@
     "uuid": "3.3.x"
   },
   "scripts": {
-    "start": "node app.js"
+    "start": "node server.js"
   },
   "engine": {
     "node": "10.x"
