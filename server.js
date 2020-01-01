@@ -4,7 +4,7 @@ var app = require('express')(),
     server = require('http').createServer(app),
     io = require('socket.io').listen(server);
 
-var UUID = require('node-uuid');
+var UUID = require('uuid');
 
 MessageType = {
     ChatMessage : 0,
