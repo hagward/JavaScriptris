@@ -1,10 +1,10 @@
-var port = 7845;
+var port = process.env.PORT || 7845;
 
 var app = require('express')(),
     server = require('http').createServer(app),
     io = require('socket.io').listen(server);
 
-var UUID = require('node-uuid');
+var UUID = require('uuid');
 
 MessageType = {
     ChatMessage : 0,
