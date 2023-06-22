@@ -12,7 +12,7 @@ tricky. I then reckoned that was a completely unnecessary optimization and
 saved myself from the headache by shoving it down the garbage chute. The score
 system is from the original Tetris but the level system is completely improvised.
 
-Feel free to [try it out](https://dl.dropboxusercontent.com/u/334931/JavaScriptris/index.html).
+Feel free to [try it out](https://hagward.github.io/JavaScriptris/).
 
 ## Contribution
 
